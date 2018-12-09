@@ -3,6 +3,7 @@ title: "Séance de travaux pratiques 2"
 output:
   html_document: default
   html_notebook: default
+  pdf_document: default
 ---
 
 ** **
@@ -42,8 +43,9 @@ Des données d'apprentissage (*train*) contiennent les profils et l'information 
 ```{r}
 # Les données du TP se trouve dans le package isd
 # le package peut être installé depuis Github
+# install.packages("git2r", "httr", "usethis")
 # install.packages("devtools")
-# devtools::install_github("bcm-uga/isd")
+devtools::install_github("bcm-uga/isd")
 library(isd)
 ```
 
@@ -60,11 +62,13 @@ On prendra soin de commenter les codes R tout au long des questions du TP. Il es
 # help: data
 data("titanic_train")
 tit_train <- titanic_train  
+tit_train
 ```
 
 Les données se présentent de la manière suivante
 ```{r}
 # help: head, View 
+help(head)
 head(tit_train)
 ```
 
@@ -84,10 +88,10 @@ Chaque ligne représente un passager et neuf colonnes indiquent le profil du pas
 
 ```{r}
 # help: apply, mean, round
+# help(apply)
+prob <- apply(tit_train, MARGIN = 2, FUN = mean)
 
-# prob <- apply(tit_train, MARGIN = change_me, FUN = change_moi)
-
-# round(prob, cambia_mi)
+round(prob, 2)
 ```
 
 
@@ -96,7 +100,7 @@ Chaque ligne représente un passager et neuf colonnes indiquent le profil du pas
 ```{r}
 # help: magrittr
 library(magrittr)
-# tit_train %>% apply(MARGIN = change_me, FUN = change_moi) %>% round(cambia_mi)
+tit_train %>% apply(MARGIN = 2, FUN = mean) %>% round(2)
 ```
 
 
@@ -108,10 +112,11 @@ library(magrittr)
 # help: cat
 
 cat("Probabilité de survie d'un homme :\n")
-# mean(tit_train$survived[change_moi]) 
+# mean(tit_train$survived[change_moi])
+mean(tit_train$survived[tit_train$gender == 1]) 
 
 cat("Probabilité de survie d'une femme :\n")
-# changeo_mio[tit_train$gender != 1] %>% mean
+tit_train$survived[tit_train$gender != 1] %>% mean
 ```
 
 
@@ -143,9 +148,13 @@ plot(factor(sex),
 * Calculer la proportion d'hommes parmi les survivants.
 
 ```{r}
- mean( le_bon_truc )
+ # mean( le_bon_truc )
+# mean( tit_train$survived[tit_train$gender == 1] )
 ```
-
+```{r}
+colonnes <- 7:9
+tit_train[,7:9]
+```
 
 
 * Calculer la probabilité de survie d'un individu sachant sa classe à bord (colonnes 7 à 9 dans le tableau de données).
@@ -156,6 +165,7 @@ colonnes <- 7:9
 # Ecrire une fonction qui retourne la probabilité demandée pour la colonne j
 mean_class <- function(j) {
     # ca_tient_en_une_ligne
+    return(mean(tit_train[,j]))
   }
 
 # appliquer la fonction aux colonnes 7:9

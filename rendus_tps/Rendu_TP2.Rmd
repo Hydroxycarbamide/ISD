@@ -1,8 +1,9 @@
 ---
 title: "Rendu Travaux Pratiques 2"
 output:
-  html_document: default
+  pdf_document: default
   html_notebook: default
+  html_document: default
 ---
 
 ** **
@@ -25,9 +26,42 @@ output:
 
 *  À partir de l'ensemble d'apprentissage, donner les fréquences des variables contenues dans chacune des 9 colonnes du tableau de données `tit_train`.  Arrondir les résultats à 2 décimales
 
+```{r}
+# help: magrittr
+library(magrittr)
+tit_train <- titanic_train  
+tit_train %>% apply(MARGIN = 2, FUN = mean) %>% round(2)
+```
+
 * Calculer la probabilité de survie d'un homme (`gender == 1`) ou une femme (`gender == 0`).
 
+```{r}
+# help: list
+# help: cat
+cat("Probabilité de survie d'un homme :\n")
+mean(tit_train$survived[tit_train$gender == 1]) 
+
+cat("Probabilité de survie d'une femme :\n")
+tit_train$survived[tit_train$gender != 1] %>% mean
+```
+
 * Calculer la probabilité de survie d'un individu sachant sa classe à bord (colonnes 7 à 9 dans le tableau de données `tit_train`).
+```{r}
+colonnes <- 7:9
+
+# Ecrire une fonction qui retourne la probabilité demandée pour la colonne j
+mean_class <- function(j) {
+    # ca_tient_en_une_ligne
+    return(mean(tit_train[,j]))
+  }
+
+# appliquer la fonction aux colonnes 7:9
+# help: sapply
+
+prob <- sapply(colonnes, mean_class)
+names(prob) <- names(tit_train[,7:9])
+prob
+```
 
 #### Exercice 2: 
 
