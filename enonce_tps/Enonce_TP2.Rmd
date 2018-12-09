@@ -151,10 +151,6 @@ plot(factor(sex),
  # mean( le_bon_truc )
 # mean( tit_train$survived[tit_train$gender == 1] )
 ```
-```{r}
-colonnes <- 7:9
-tit_train[,7:9]
-```
 
 
 * Calculer la probabilité de survie d'un individu sachant sa classe à bord (colonnes 7 à 9 dans le tableau de données).
@@ -191,11 +187,11 @@ Dans cet exercice, on construira des prédicteurs s'appuyant sur les probabilit�
 
 attach(tit_train)
 cat("femmme adulte ou agée :\n") 
-# mean(survived[ trouve_la_bonne_condition ])
+mean(survived[ gender == 0 & (elder == 1 | adult == 1) ])
 cat("homme adulte ou agé :\n")
-# mean(survived[ copier_cest_pas_beau ])
+mean(survived[ gender == 1 & (elder == 1 | adult == 1) ])
 cat("jeune fille :\n")
-# mean(survived[ et_coller_cest_trop_dur ])
+mean(survived[ gender == 0 & child == 1 ])
 cat("jeune garçon :\n")
 mean(survived[gender == 1 & child == 1])
 detach(tit_train)

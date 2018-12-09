@@ -67,6 +67,22 @@ prob
 
 * Calculer les probabilités de survie conditionnelles sachant les variables `gender` et `child` (4 cas).
 
+```{r}
+## attach permet d'utiliser directement les noms des variables d'un data.frame
+## par exemple, on peut utiliser 'gender' à la place de 'tit_train$gender'
+
+attach(tit_train)
+cat("femmme adulte ou agée :\n") 
+mean(survived[ gender == 0 & (elder == 1 | adult == 1) ])
+cat("homme adulte ou agé :\n")
+mean(survived[ gender == 1 & (elder == 1 | adult == 1) ])
+cat("jeune fille :\n")
+mean(survived[ gender == 0 & child == 1 ])
+cat("jeune garçon :\n")
+mean(survived[gender == 1 & child == 1])
+detach(tit_train)
+```
+
 * Calculer les nombres de prédictions correctes et incorrectes effectuées dans l'ensemble `tit_train` en considérant les fréquences de survie conditionnelles aux variables `gender` et `child`. Représenter les résultats sous forme de matrice de confusion.
 
 * Calculer  les nombres de prédictions correctes et incorrectes effectuées dans l'ensemble `tit_train`, le taux de bons classement (accuracy) et la perte logloss en considérant les fréquences de survie conditionnelles aux variables `gender`, `child` et `class3`  (donner le script complet).
