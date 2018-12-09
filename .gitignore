@@ -1,0 +1,50 @@
+#trucs de macs
+.DS_Store
+
+#R Data
+.Rproj.user
+.Rhistory
+.RData
+.Rapp.history
+.Ruserdata
+tds/.Rapp*
+
+#PDF
+# *.pdf
+cours/*.pdf
+tds/*.pdf
+
+#HTML
+*.htm
+*.html
+cours/*.htm
+cours/*.html
+rendus_tps/*.html
+rendus_tps/*.htm
+enonce_tps/*.html
+enonce_tps/*.htm
+
+#bin
+rendus_tps/*.RDS
+rendus_tps/*.RData
+rendus_tps/*.hdf5
+
+#tps corrigés
+tps/*
+
+#tds
+tds/*
+
+#bookdown
+bookdown/.Rhistory
+bookdown/.RData
+bookdown/.DS_Store
+bookdown/.Rproj.user
+bookdown/_book/*
+bookdown/_book/figures/*.png
+bookdown/_book/figures/*.JPG
+bookdown/_book/bookdown-demo_files/*
+bookdown/_book/bookdown-demo_files/figure-html/*.png
+bookdown/_bookdown_files/*
+bookdown/_bookdown_files/bookdown-demo_files/*
+bookdown/_bookdown_files/bookdown-demo_files/figure-html/*

@@ -1,0 +1,137 @@
+---
+title: "Rendu Travaux Pratiques 1"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+** **
+
+#### Règles de rendu
+
+* Chaque TP donne lieu à un bref compte-rendu portant sur certaines questions posées dans l'énoncé du TPs.
+
+* Le compte-rendu doit être complété à partir du texte de l'énoncé. Les codes R doivent être inclus dans le texte du compte-rendu (menu **Insert**) et commentés avec précision. **Les commentaires compteront pour une part importante dans la note**.
+
+* Le compte-rendu doit être déposé **sur TEIDE à la fin de la séance de TP**. Les rendus en retard seront fortement pénalisés. Il est 
+
+* Le compte-rendu doit être déposé **sur TEIDE au format HTML uniquement**. Utiliser la fonction **Preview** ou **knitr** du menu de rstudio pour obtenir le document au format souhaité. **Les fichiers "source" (Rmd) ne seront pas acceptés par les correcteurs**.
+
+
+
+** **
+
+
+#### Exercice 1: Vecteurs, matrices, listes et fonctions 
+
+* On considère la suite finie $x_i = \sin(i)$, $i = 1,\dots,n = 123$. Combien de termes de cette suite sont-ils plus grands que 1/2 ? 
+
+```{r}
+  # comment 1 : Ultimate Question of Life
+  help(sin)
+  trouve_la_ligne_1
+  trouve_la_ligne_2
+```
+
+
+
+* On effectue un million de tirages de valeurs entre 1 et 12 de sorte que la probabilité de chaque valeur $i$ est proportionnelle à $1/i$. Calculer la fréquence de nombre pairs.
+
+```{r}
+  # comment 1
+  x <- sample(1:12, 1000000, complete_moi)
+
+  # comment 2
+  # Le reste de la division par 2 ("modulo 2") s'écrit "%% 2"
+  mean( condition_logique )
+```
+
+
+* À partir du tableau de données **BreastCancer** du package *mlbench*, créer une matrice où toutes les lignes du tableau ayant des valeurs manquantes sont enlevées. 
+
+
+```{r}
+  library('mlbench')
+
+  # charge les données en mémoire
+  data(BreastCancer)
+
+  # crée une matrice à partir du tableau de données "BreastCancer"
+  mat_bc <- data.matrix(BreastCancer)
+  
+  boo_na <- apply(mat_bc, MARGIN = 1, change_moi)
+  mat_bc_no_na <- mat_bc[change_me, ]
+  
+  # comment 2
+  dim(mat_bc_no_na) 
+```
+
+* Créer une fonction `f(x)` prenant en entrée un vecteur numérique et retournant une liste contenant la moyenne et l'ecart type de `x` (fonctions `mean`, `sd`).  Commenter et compléter le code suivant.
+
+
+```{r}
+f <-function(x){
+  # description  
+  
+  # comment 1
+  if (!is.numeric(x)) stop("x must be numeric. \n")
+  
+  # comment 2
+  object <- list( complete_moi )
+  return(object)
+}
+```
+
+
+#### Exercice 2: Vecteurs, matrices, listes et fonctions 
+
+* Calculer les valeurs propres de la matrice **M** definie ci-dessous.
+
+```{r}
+  M <- matrix(c(5, -1, -1, -1, 3, 1, -1, 1, 2), nrow  = 3)
+  M
+```
+
+* Calculer la matrice $M^{-1}$ et vérifier que $M^{-1} = U \Lambda^{-1} U^T$, où $\Lambda$ désigne une matrice diagonale contenant les valeurs propres de $M$ et $U$ une matrice unitaire correspondant aux vecteurs propres de $M$.
+
+
+#### Exercice 3 : Distance de mahalanobis 
+
+
+* Calculer la valeur $d_C^2((3,2),0)$ pour la matrice ${\bf C}$ définie ci-dessous
+
+```{r}
+  C <- matrix(c(5, -1, -1, 1), nrow  = 2)
+  C
+```
+
+
+* Pour toute ligne $i$ de la matrice `x` ci-dessous,  calculer un vecteur $(d_1, d_2)$ dont les composantes sont le carré de la distance de Mahalanobis séparant ${\bf x}_i$ du centre de la classe 1 et de la classe 2 respectivement.
+
+```{r}
+  # matrice de covariance de la classe 1
+  C1 <- matrix(c(5, -1, -1, 1), nrow  = 2, byrow = T)
+
+  # matrice de covariance de la classe 2
+  C2 <- matrix(c(3, 1, 1, 2), nrow = 2, byrow = T)
+  
+  n <- 1000
+  class <- rep(1:2, each = n)
+  
+  x1 <- MASS::mvrnorm(n, mu = c(4,0), C1)
+  x2 <- MASS::mvrnorm(n, mu = c(0,4), C2)
+  
+  x <- rbind(x1, x2)
+```
+
+
+
+* On souhaite classer l'élément ${\bf x}_i$ dans la classe 1 si 
+
+$$
+d_{C_1}({\bf x}_i , m_1) < d_{C_2}({\bf x}_i , m_2)
+$$
+et dans la classe 2 sinon.  Calculer le pourcentage d'observations qui ont été bien classées par cette procédure.
+
+
+
