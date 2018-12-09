@@ -1,0 +1,77 @@
+--- 
+title: "Introduction à la Science des Données"
+author: "Olivier François"
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+output: bookdown::gitbook
+documentclass: book
+bibliography: [book.bib, packages.bib]
+biblio-style: apalike
+link-citations: yes
+description: "Ce manuscrit contient un résumé du cours ISD et les énoncés des travaux dirigés."
+
+---
+
+# Préambule
+
+Ce document contient un résumé du cours d'Introduction à la Science des Données (ISD) et les énoncés des travaux dirigés. Il est accompagné de cinq séances de travaux pratiques notées, dont les énoncés et les formulaires de rendus sont disponibles sur l'intranet de l'école.
+
+## Organisation de l'enseignement
+
+
+
+### Cours magistral
+
+### Travaux dirigés
+
+### Travaux pratiques
+
+Le cours d'introduction à la science des données est accompagné de la réalisation de travaux pratiques (TP), donnant lieu à des rendus ayant un poids (très) important dans l'évaluation finale.
+
+Il est fortement conseillé - voire obligatoire - de **préparer les séances de TPs** pour **déposer le compte-rendu de TP** dans de bonnes conditions en fin de séance. Sans préparation, le temps nécessaire pour réaliser chaque TP pourra être très supérieur aux 3h réservées en salle-info. 
+
+Pour chaque TP, il sera fourni un énoncé sous forme d'un document de travail interactif, à manipuler dans l'environnement Rstudio. La préparation consiste à lire à l'avance l'intégralité du TP, à en comprendre les principales étapes et celles nécessitant des recherches dans l'aide du programme R. Elle consiste à anticiper les réponses aux questions, la lecture de l'aide et la compréhension des commandes R à manipuler. 
+
+Le **compte-rendu de TP est un document séparé** de l'énoncé du TP. La préparation consiste aussi à lire le fichier de compte-rendu pour **identifier les réponses à rendre**. En effet, le document de travail **ne doit pas être rendu**. Seul **le compte-rendu doit être déposé dans TEIDE en fin de séance** au **format HTML**. Le **rendu porte notamment sur les questions finales**. Il faut gérer son temps le mieux possible. La préparation et une bonne organisation avant et pendant le TP sont essentielles. 
+
+
+#### Règles de rendu
+
+* Chaque TP donne lieu à un compte-rendu portant sur des questions clés posées dans l'énoncé du TPs.
+
+* Le compte-rendu peut être complété à partir du texte de l'énoncé. Les codes R doivent être inclus dans le texte du compte-rendu (menu **Insert**) et commentés avec précision. **Les commentaires compteront pour une part importante dans la note** de TP.
+
+* Le compte-rendu doit être déposé **sur TEIDE au format HTML uniquement**. Utiliser la fonction **Preview** ou **knitr** du menu de Rstudio pour obtenir le document au format souhaité. **Les fichiers "source" (Rmd) ne seront pas acceptés par les correcteurs**.
+
+* Le compte-rendu est individuel et il doit être déposé **sur TEIDE à la fin de la séance de TP**. Les rendus en retard ou le non-respect des règles de rendus seront (fortement) pénalisés.
+
+
+#### Références pour la progammation en R
+
+Les TP seront effectués en langage R. Les compétences demandées en programmation sont celles de la première partie du cours de base de progammation. Des ressources et des textes d'introduction concernant le langage R dans les références suivantes 
+
+- Goulet, V. (2016). [Introduction à la Programmation en R](https://cran.r-project.org/doc/contrib/Goulet_introduction_programmation_R.pdf) . Ecole d'actuariat, Université Laval, Québec, Canada.
+
+- Paradis E. (2005). [R pour les Débutants](https://cran.r-project.org/doc/contrib/Paradis-rdebuts_fr.pdf). Université de Montpellier, France. 
+
+- Sur le site de R: [Introduction à R](https://cran.r-project.org/doc/manuals/r-release/R-intro.pdf) 
+
+- Liste des [fonctions de base](https://stat.ethz.ch/R-manual/R-devel/library/base/html/00Index.html).
+
+### Utilisation des documents
+
+## Evaluation 
+
+### Controle continu
+
+### Défis
+
+### Examen
+
+
+```{r include=FALSE}
+# automatically create a bib database for R packages
+knitr::write_bib(c(
+  .packages(), 'bookdown', 'knitr', 'rmarkdown'
+), 'packages.bib')
+```
