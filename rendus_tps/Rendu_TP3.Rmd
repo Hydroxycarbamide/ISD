@@ -1,8 +1,9 @@
 ---
 title: "Rendu Travaux Pratiques 3"
 output:
-  html_document: default
+  pdf_document: default
   html_notebook: default
+  html_document: default
 ---
 
 ** **
@@ -19,7 +20,11 @@ output:
 
 
 ** **
-
+```{r}
+#install.packages("devtools")
+#devtools::install_github("bcm-uga/isd")
+library(isd)
+```
 
 
 
@@ -27,26 +32,318 @@ output:
 
 * Méthode `knn` : Pour $k = 1,\dots, 30$, calculer l'erreur de classification et la perte log loss à partir de l'ensemble test (on modifiera 0 ou 1 les probabilités pour éviter les valeurs "Inf"). Représenter ces résultats sous la forme de graphes "accuracy" et "logloss" en fonction de $k$.
 
+```{r}
+x <- isd::rhastib(n_train = 200,
+                    n_test = 200,
+                    n_subclass = 10,
+                    sigma2 = 0.05)
+
+accuracy <- NULL
+log_loss <-  NULL
+
+for (k in 1:30){
+  
+  # Méthode k-plus proches voisins de l'ensemble test récupérant 10 voisins entre l'ensemble test et l'ensemble d'apprentissage en fonction de la classification de test
+  mod_knn <- class::knn(train = x$train, 
+                        test = x$test, 
+                        cl = x$class_test, 
+                        k = k, 
+                        prob = TRUE)
+  
+  # On considère la classification des points comme notre classification de prédiction (on récupère en plus, leur probabilités dans prob_class)
+  class_pred <- mod_knn
+  prob_class <- attr(mod_knn,"prob")
+  
+  # les probabilités sont modifiées pour éviter Inf  
+  prob_class[prob_class == 1] <- 1 - 1e-09 
+  prob_class[prob_class == 0] <- 1e-09 
+
+  # On calcule la précision pour chaque k
+  accuracy[k] <- mean(class_pred == x$class_test)
+  
+  boo <- (class_pred == x$class_test)
+  log_loss[k] <- - mean(log(prob_class[boo])) - mean(log(1 - prob_class[!boo]))
+}
+
+par(mfrow = c(1, 2)) # divise la fenetre en 1 ligne 2 colonnes
+plot(accuracy, col = "lightblue", type = "l", lwd = 3, xlab = "Nombre de voisins")
+plot(log_loss, col = "palegreen", type = "l", lwd = 3, xlab = "Nombre de voisins")
+
+# k meilleure précision
+k_max_accuracy = match(max(accuracy),accuracy)
+print(k_max_accuracy)
+print(c("accuracy: ", accuracy[k_max_accuracy]))
+print(c("logloss: ", log_loss[k_max_accuracy]))
+
+# k plus faible perte
+k_min_log_loss = match(min(log_loss),log_loss)
+print(k_min_log_loss)
+print(c("accuracy: ", accuracy[k_min_log_loss]))
+print(c("logloss: ", log_loss[k_min_log_loss]))
+```
+
 *  Quel choix de $k$ vous parait le plus pertinent pour la simulation effectuée ?
+
+On sait que la valeur de k dépend de l'échantillon et de la simulation.
+Mais d'après moi, pour  $k \in [0, 13]$, on trouve qu'il y a une meilleure précision sur la prédiction dans l'ensemble test ce qui parait le plus pertinent, même si pour $k \in ]11, 30]$, la perte y est minimale. De plus, le logloss de k ayant la meilleure précision ne présente pas une grande différence avec le k ayant le logloss minimum.
 
 
 #### Exercice 2 : Données simulées (lda)
 
 * Méthode `lda` : Calculer le taux de bonne classification et la perte log loss sur l'ensemble test. 
 
+```{r}
+require(MASS)
+help(lda)
+
+# 
+    mod_lda <- MASS::lda(x = x$test, 
+                         grouping = x$class_test)
+
+help(predict.lda)
+
+#   
+    pred <- predict(mod_lda, newdata = x$test)
+    
+# Les  probabilités correspondent aux classes des variables testées     
+    prob_class <- pred$posterior
+  
+# On génère un diagramme en barres montrant les répartitions des probabilités entre les points bleus et oranges
+    barplot(t(prob_class), col = c("lightblue", "orange"),
+            border = NA,
+            xlab = "Test set")
+    head(prob_class)
+
+# On détermine le taux de bonne classification (précision)
+  accuracy <- mean(x$class_test == pred$class)
+  cat("Accuracy = ", accuracy, "\n")
+  
+# 
+  log_loss <- -mean( (x$class_test == "lightblue")*log(1-prob_class) + (x$class_test == "orange")*log(prob_class) )
+  cat("Logloss = ", log_loss, "\n")
+
+```
+
 
 #### Exercice 3 : Données simulées (nnet) 
 
 * Méthode `nnet` :  Pour `decay`$ = 0, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1$, calculer le taux de bonne classification et la perte log loss sur l'ensemble test. Représenter ces résultats sous forme de tableau (accuracy/logloss en fonction de `decay`).
 
+```{r}
+  accuracy <- NULL
+  log_loss <-  NULL
+
+  decay <- c(0, 10^(-(6:0)))
+
+  require(nnet)
+  is_it_orange <- (x$class_train == "orange")
+# On ajuste des modeles nnet pour 7 valeurs du paramètre decay
+# decay est un paramètre de régularisation  
+  
+  for (lambda in decay){
+    
+    # neural net 
+    mod_nnet <- nnet( x = x$train, 
+                      y = is_it_orange, 
+                      size = 30,
+                      decay = lambda,
+                      maxit = 500,
+                      entropy = TRUE,
+                      trace = FALSE)
+    
+    # probabilité de prédiction en orange
+    prob_class <- predict(mod_nnet, newdata = data.frame(x$test))
+  
+    prob_class[prob_class > 1 - 1e-08]  <- 1 - 1e-08
+    prob_class[prob_class < 1e-08] <- 1e-08
+  
+    # calcul du taux de bonne précision
+    accuracy <- c(accuracy, 
+                  mean(is_it_orange == (prob_class > 0.5)))
+  
+    # calul de la perte log loss
+    log_loss <- c( log_loss, 
+                - mean((x$class_test == "lightblue")*log(1 - prob_class)) - mean((is_it_orange)*log(prob_class)) ) 
+  }
+  
+  library(magrittr)
+
+  names(accuracy) <- as.character(decay)
+  names(log_loss) <- as.character(decay)
+  
+  data.frame(accuracy, log_loss)  %>% knitr::kable(digit = 2)
+```
+
 
 #### Exercice 4 : "Wisconsin Breast Cancer Database" 
 
+```{r}
+  library(mlbench)
+  data(BreastCancer)
+  boo_na <- !apply(BreastCancer, 1, anyNA)
+  breast_cancer <- BreastCancer[boo_na,-1]
+```
+
 * À l'aide de l'ensemble test, évaluer les taux de classification et de perte log loss pour les méthodes `lda`, `nnet` et `knn`. Pour `knn` et `nnet`, utiliser, dans un premier temps, les paramètres $k = 15$ et `decay`$=0.01$.
+
+```{r}
+# On retranche les données en ensembles de tests (cancer_test) et d'apprentissage (cancer_train)
+
+  cancer_train <- breast_cancer[(0:546),]
+  cancer_test <- breast_cancer[-(0:546),]
+```
+
+Méthode analyse discriminante linéaire:
+
+```{r}
+
+    # lda de l'ensemble d'apprentissage
+      mod_lda <- MASS::lda(cancer_train$Class ~ ., data = cancer_train[,-10])
+
+    # probabilité à priori de l'ensemble d'apprentissage
+      pred_lda <- predict(mod_lda, newdata = cancer_test[,-10])$class
+
+    # précision entre les 2 ensemble (apprentissage et test)
+      accuracy_lda <- mean(pred_lda == cancer_test$Class)
+      
+    # probabilité de l'ensemble testé
+      prob_lda <- predict(mod_lda, newdata = cancer_test[,-10])$posterior
+      
+    # logloss 
+      log_loss_lda <- -mean((cancer_test$Class == "benign")*log(1 - prob_lda) + (cancer_test$Class == "malignant")*log(prob_lda))
+      
+      accuracy_lda
+      log_loss_lda
+```
+
+Méthode du réseau de neuronnes:
+
+```{r}
+    # nnet
+  require(nnet)
+  y <-  as.numeric(cancer_train$Class == "malignant")
+  
+  mod_nnet <- nnet::nnet(x = cancer_train[,-10], 
+                         y = y, 
+                         size = 30,
+                         entropy = TRUE, 
+                         decay = 0.01, 
+                         trace = FALSE)
+  
+  prob_nnet <- predict(mod_nnet, cancer_test[,-10])
+  
+  prob_nnet[prob_nnet == 0] <- 1e-08
+  prob_nnet[prob_nnet == 1] <- 1 - 1e-08
+  
+  accuracy_nnet <- mean((prob_nnet > 0.5) == (cancer_test$Class == "malignant"))
+
+  log_loss_nnet <- -mean((cancer_test$Class == "benign")*log(1 - prob_nnet) + (cancer_test$Class == "malignant")*log(prob_nnet)) 
+  
+  accuracy_nnet
+  log_loss_nnet
+```
+
+Méthode des k-plus proches voisins:
+```{r}
+    # knn
+     mod_knn <- class::knn(cancer_train[,-10], 
+                            cancer_test[,-10], 
+                            cancer_train$Class, 
+                            k = 15, 
+                            prob = TRUE)
+      
+      accuracy_knn <- mean(mod_knn == cancer_test$Class)
+      accuracy_knn
+      
+      prob_class <- attr(mod_knn, "prob")
+      prob_class[prob_class == 1] <-  1 - 1e-08
+      
+      log_loss_knn <- - mean( (mod_knn == cancer_test$Class)*log(prob_class) + (mod_knn !=     cancer_test$Class)*log(1 - prob_class) )
+      log_loss_knn
+``` 
+
+
 
 * Reporter sous forme de tableau avec des valeurs arrondies les valeurs des taux de classification et de perte log loss obtenues pour les méthodes `knn`, `lda`, `nnet` (dans cet ordre).  Quel choix de prédicteur vous parait être le meilleur ? Justifier.
 
+```{r}
+  log_loss <-  c(log_loss_knn, log_loss_lda, log_loss_nnet)
+
+  names(log_loss) <-  c("knn", "lda", "nnet")
+  
+  barplot(log_loss, col = 2:4, ylab = "log loss")
+  
+  accuracy <- c(accuracy_knn, accuracy_lda, accuracy_nnet)
+  
+  names(accuracy) <-  c("knn", "lda", "nnet")
+  
+  barplot(accuracy, col = 2:4, ylab = "accuracy") 
+```
+
 * Pour `knn` et `nnet`, explorer les paramètres de "complexité" ($k$ et `decay`) conduisant aux meilleures performances. Reporter les performances des modèles correspondant dans un tableau.
+
+```{r}
+    # knn
+  accuracy_knn = NULL
+  log_loss_knn = NULL
+  n = c(1:30)
+  for (k in n){
+    mod_knn <- class::knn(cancer_train[,-10], 
+                            cancer_test[,-10], 
+                            cancer_train$Class, 
+                            k = k, 
+                            prob = TRUE)
+      
+    accuracy_knn[k] <- mean(mod_knn == cancer_test$Class)
+    accuracy_knn[k]
+      
+    prob_class <- attr(mod_knn, "prob")
+    prob_class[prob_class == 1] <-  1 - 1e-08
+      
+    log_loss_knn[k] <- - mean( (mod_knn == cancer_test$Class)*log(prob_class) + (mod_knn !=     cancer_test$Class)*log(1 - prob_class) )
+    log_loss_knn[k]
+  }
+  
+  par(mfrow = c(1, 2)) # divise la fenetre en 1 ligne 2 colonnes
+  plot(accuracy_knn, col = "lightblue", type = "l", lwd = 3, xlab = "Nombre de voisins")
+  plot(log_loss_knn, col = "palegreen", type = "l", lwd = 3, xlab = "Nombre de voisins")
+  
+  library(magrittr)
+  data.frame(n, accuracy_knn, log_loss_knn)  %>% knitr::kable(digit = 2)
+``` 
+
+```{r}
+    # nnet
+  accuracy_nnet <- NULL
+  log_loss_nnet <-  NULL
+  decay <- c(0, 10^(-(6:0)))
+  for (lambda in decay){
+      y <-  as.numeric(cancer_train$Class == "malignant")
+      
+      mod_nnet <- nnet::nnet(x = cancer_train[,-10], 
+                             y = y, 
+                             size = 30,
+                             entropy = TRUE, 
+                             decay = lambda, 
+                             trace = FALSE)
+      
+      prob_nnet <- predict(mod_nnet, cancer_test[,-10])
+      
+      prob_nnet[prob_nnet == 0] <- 1e-08
+      prob_nnet[prob_nnet == 1] <- 1 - 1e-08
+      
+      accuracy_nnet <- c(accuracy_nnet, mean((prob_nnet > 0.5) == (cancer_test$Class == "malignant")))
+
+      log_loss_nnet <- c(log_loss_nnet, -mean((cancer_test$Class == "benign")*log(1 - prob_nnet) + (cancer_test$Class == "malignant")*log(prob_nnet))) 
+      
+  }
+  library(magrittr)
+
+  names(accuracy_nnet) <- as.character(decay)
+  names(log_loss_nnet) <- as.character(decay)
+  
+  data.frame(accuracy_nnet, log_loss_nnet)  %>% knitr::kable(digit = 2)
+```
 
 #### Défi "Wisconsin Breast Cancer Database" 
 
