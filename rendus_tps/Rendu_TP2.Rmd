@@ -1,9 +1,9 @@
 ---
 title: "Rendu Travaux Pratiques 2"
 output:
-  pdf_document: default
-  html_notebook: default
   html_document: default
+  html_notebook: default
+  pdf_document: default
 ---
 
 ** **
@@ -28,7 +28,9 @@ output:
 
 ```{r}
 # help: magrittr
+library(isd)
 library(magrittr)
+data("titanic_train")
 tit_train <- titanic_train  
 tit_train %>% apply(MARGIN = 2, FUN = mean) %>% round(2)
 ```
@@ -52,14 +54,14 @@ colonnes <- 7:9
 # Ecrire une fonction qui retourne la probabilité demandée pour la colonne j
 mean_class <- function(j) {
     # ca_tient_en_une_ligne
-    return(mean(tit_train[,j]))
+    return(mean(tit_train$survived[tit_train[,j] == 1]))
   }
 
 # appliquer la fonction aux colonnes 7:9
 # help: sapply
 
 prob <- sapply(colonnes, mean_class)
-names(prob) <- names(tit_train[,7:9])
+names(prob) <- names(tit_train[,colonnes])
 prob
 ```
 
@@ -73,27 +75,127 @@ prob
 
 attach(tit_train)
 cat("femmme adulte ou agée :\n") 
-mean(survived[ gender == 0 & (elder == 1 | adult == 1) ])
+mean(survived[ !gender & (elder | adult) ])
 cat("homme adulte ou agé :\n")
-mean(survived[ gender == 1 & (elder == 1 | adult == 1) ])
+mean(survived[ gender & (elder | adult) ])
 cat("jeune fille :\n")
-mean(survived[ gender == 0 & child == 1 ])
+mean(survived[ !gender & child ])
 cat("jeune garçon :\n")
-mean(survived[gender == 1 & child == 1])
+mean(survived[gender & child])
 detach(tit_train)
 ```
 
 * Calculer les nombres de prédictions correctes et incorrectes effectuées dans l'ensemble `tit_train` en considérant les fréquences de survie conditionnelles aux variables `gender` et `child`. Représenter les résultats sous forme de matrice de confusion.
 
+```{r}
+
+# help: for (i in 1:n){ body }
+  pred <- NULL
+  n <- nrow(tit_train)
+   
+  for (i in 1:n){
+    # On selectionne un passager
+    passenger <- tit_train[i,]  
+    
+    # Le boolean permet de selectionner tous les passager correspondant au même sexe et caracteristique enfant que le passager selectionne
+    bool <- tit_train$gender == passenger$gender & tit_train$child == passenger$child 
+    
+    # On applique alors la moyenne sur tous les passager correspondants
+    pred[i] <- mean(tit_train$survived[bool])
+  }
+  
+  # Affiche la précision de la répartition
+  accuracy <- sum( tit_train$survived == (pred > 0.5) )/nrow(tit_train)
+  cat("Accuracy: ", accuracy)
+  
+  # Affiche la répartition entre ceux qui ont survécus et ceux que l'on prévoit qui vont survivre (FALSE, TRUE correspond à la prédiction et, 0,1 correspondent aux statistiques)
+  table(tit_train$survived, (pred > 0.5) )
+```
+
 * Calculer  les nombres de prédictions correctes et incorrectes effectuées dans l'ensemble `tit_train`, le taux de bons classement (accuracy) et la perte logloss en considérant les fréquences de survie conditionnelles aux variables `gender`, `child` et `class3`  (donner le script complet).
+
+```{r}
+
+# help: for (i in 1:n){ body }
+  pred <- NULL
+  n <- nrow(tit_train)
+  
+  for (i in 1:n){
+    # On selectionne un passager
+    passenger <- tit_train[i,]  
+    
+    # Le boolean permet de selectionner tous les passager correspondant au même sexe, caracteristique enfant et la classe que le passager selectionne
+    bool <- bool <- tit_train$gender == passenger$gender & tit_train$child == passenger$child & tit_train$class3 == passenger$class3
+    
+    # On applique alors la moyenne sur tous les passager correspondants
+    pred[i] <- mean(tit_train$survived[bool])
+  }
+  
+  # Affiche la précision de la répartition
+  accuracy <- sum( tit_train$survived == (pred > 0.5) )/nrow(tit_train)
+  cat("Accuracy: ", accuracy)
+  
+  # Affiche le LogLoss
+  y = tit_train$survived
+  pred[pred == 1] <- 0.999999
+  p = pred
+  L = - (sum(y * log(p) + (1 - y) * log(1 - p))) / length(y)
+  cat("\nLogLoss: ", L)
+```
 
 * Pour l'ensemble de test, évaluer les performances du prédicteur fréquentiel s'appuyant sur les caractéristiques `gender`, `child`, `class3` selon les critères *accuracy* et *log-loss*  (donner le script complet).
 
+```{r}
+# accuracy
+  # help: for (i in 1:n){ body }
+  data("titanic_test")
+  tit_test <- titanic_test
+  
+  pred <- NULL
+  n <- nrow(tit_test)
+  
+  for (i in 1:n){
+    # On selectionne un passager
+    passenger <- tit_test[i,]  
+    
+    # Le boolean permet de selectionner tous les passager correspondant au même sexe, caracteristique enfant et la classe que le passager selectionne
+    bool <- tit_train$gender == passenger$gender & tit_train$child == passenger$child  &  tit_train$class3 == passenger$class3 
+     
+    # On applique alors la moyenne sur tous les passager correspondants
+    pred[i] <- mean(tit_train$survived[bool])
+  }
+  
+  isd::eval_titanic(pred)
+```
+
 * Pour l'ensemble de test, évaluer les predictions un prédicteur s'appuyant sur un modèle de réseau de neurones ayant 5 neurones cachés et utilisant le profil complet d'un passager  selon les critères *accuracy* et *log-loss*  (donner le script complet).
+
+```{r}
+# input : on enleve la variable de survie (premiere colonne)
+  x <- tit_train[,-1]
+
+# output : la variable survie
+  y <- tit_train[,1]
+  
+# On ajuste un réseau de neurones de 5 neurones cachés et on calcule les prédictions (probabilités) 
+  mod <- nnet::nnet(x,  y, size = 5)
+  pred_nnet <- predict(mod, tit_test)
+  
+# On affiche la précision de la prédiction et le logloss
+  isd::eval_titanic(pred_nnet)
+```
 
 * Quelles prédictions vous semblent les meilleures ? Celles obtenues par les probabilités empiriques ou celles obtenues par le modèle neuronal ? Justifier votre réponse. 
 
+La prédiction obtenues par les probabilités empiriques sont que celles obtenues par le modèle neuronal. Cela est expliqué par le fait que le réseau de neuronnes permet la simulation de l'évènement mais qu'il ne soit pas consistant, alors que les probabilités empiriques sont basés sur une variable définie qui est qu'une personne survit si la probabilité conditionnel de survie est supérieure à 0.5.
+
+
 * Pour quels individus de l'ensemble test observe-t-on des différences de prédiction entre les approches empiriques et neuronales (donner le script complet) ? 
+
+```{r}
+  # Tous les individus ont des prédictions différentes entre les deux méthodes
+  which(pred_nnet != pred)
+```
 
 
 

@@ -161,7 +161,7 @@ colonnes <- 7:9
 # Ecrire une fonction qui retourne la probabilité demandée pour la colonne j
 mean_class <- function(j) {
     # ca_tient_en_une_ligne
-    return(mean(tit_train[,j]))
+    return(mean(tit_train$survived[,j]))
   }
 
 # appliquer la fonction aux colonnes 7:9
@@ -222,8 +222,8 @@ detach(tit_train)
     pred[i] <- mean(tit_train$survived[bool])
   }
   
-#  accuracy <- sum( tit_train$survived == logical_qui_que_quoi )/nrow(tit_train)
-#  cat("Accuracy: ", accuracy)
+ accuracy <- sum( tit_train$survived == (pred > 0.5) )/nrow(tit_train)
+ cat("Accuracy: ", accuracy)
   
   if ( round(accuracy, 4) != 0.7821 ){
   stop("Erreur : Essaie encore !")
@@ -238,8 +238,8 @@ detach(tit_train)
 
 
 ```{r}
-# help: table
-# table(tit_train$survived, logical_qui_que_quoi )
+help(table)
+table(tit_train$survived, (pred > 0.5) )
 ```
 
 
@@ -256,8 +256,8 @@ où $y_i$ et  $p_i$ représentent l'indicateur de survie et la probabilité de s
 * Quelle valeur de $L$ correspond à une prédiction au hasard ($p_i = 1/2$) ?
 
 ```{r}
-# logloss quand p_i = 1/2
-# L =
+  # logloss quand p_i = 1/2
+  L = -1/nrow(tit_train) * log(1/2) * nrow(tit_train)
   cat("On tire la survie à pile ou face.\n")
   cat("logloss: ", L)
 ```
@@ -265,9 +265,10 @@ où $y_i$ et  $p_i$ représentent l'indicateur de survie et la probabilité de s
 * Quelle valeur de $L$ correspond à une prédiction effectuée à partir de la probabilité globale de survie ? 
 
 ```{r}
-#  logloss quand p est la probabilité globale de survie
-#  p = mean(tit_train$survived)
-#  L =
+  #  logloss quand p est la probabilité globale de survie
+    y = tit_train$survived
+    p = mean(tit_train$survived)
+    L = - (sum(y * log(p) + (1 - y) * log(1 - p))) / length(y)
     cat("On tire la survie suivant la probabilité globale de survie.\n")
     cat("logloss: ", L)
 ```
@@ -275,15 +276,15 @@ où $y_i$ et  $p_i$ représentent l'indicateur de survie et la probabilité de s
 * Calculer la perte **logloss** associée aux prédictions stockées dans la variable `pred`. 
 
 ```{r}
-# y = tit_train$survived
-# p = pred
+  y = tit_train$survived
+  p = pred
 
- L = traduire_la_formule_en_R
+  L = - (sum(y * log(p) + (1 - y) * log(1 - p))) / length(y)
 
-# test
-if ( round(L, 4) != 0.517 ){
-  stop("Erreur : Essaie encore!")
-}
+  # test
+  if ( round(L, 4) != 0.517 ){
+    stop("Erreur : Essaie encore!")
+  }
 ```
  
 
@@ -323,7 +324,7 @@ detach(tit_train)
     passenger <- tit_train[i,]  
     
     #
-    bool <- tit_train$gender == passenger$gender & tit_train$child == passenger$child & quelque_chose_de_plus
+    bool <- tit_train$gender == passenger$gender & tit_train$child == passenger$child & tit_train$class3 == passenger$class3
     
     #
     pred[i] <- mean(tit_train$survived[bool])
@@ -340,7 +341,7 @@ detach(tit_train)
 ```{r}
 # accuracy
 
-  accuracy <- sum(tit_train$survived ==  logical_qui_que_quoi) /nrow(tit_train)
+  accuracy <- sum(tit_train$survived == (pred>0.5) ) /nrow(tit_train)
   cat("Accuracy: ", accuracy,"\n")
 
   # test
@@ -350,7 +351,7 @@ detach(tit_train)
   
 # logloss
   pred[pred == 1] <- 0.999999
-  L <- copie_la_formule_log_loss_que_tu_as_trouvée_plus_haut
+  L <- - (sum(y * log(pred) + (1 - tit_train$survived) * log(1 - pred))) / length(tit_train$survived)
   cat("logloss: ", L)
 ```
   
@@ -422,11 +423,11 @@ head(tit_test)
 * Pour l'ensemble de test, évaluer les prédictions un prédicteur s'appuyant sur le modèle de réseau de neurones utilisant le profil complet d'un passager. Commenter le code suivant. 
 
 ```{r}
-# commenter
- #mod <- nnet::nnet(x,  y, size = 3)
+# 
+ mod <- nnet::nnet(x,  y, size = 3)
  pred_nnet <- predict(mod, tit_test)
 
-# commenter
+# 
  isd::eval_titanic(pred_nnet)
 ```
 
