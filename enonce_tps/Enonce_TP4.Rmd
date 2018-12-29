@@ -65,10 +65,10 @@ On considère un jeu de données unidimensionel dans lequel les variables $x \in
 
 # help(runif) : comment 1
   n <- 500 
-  x <- alea_jacta_est(n, -2, 2)
+  x <- runif(n, -2, 2)
 
 # comment 2
-  y <- logica_conditione
+  y <- x >= -1 & x <= 1
   color <- rep("blue", n)
   color[y] <- "orange" 
 
@@ -83,12 +83,12 @@ On considère un jeu de données unidimensionel dans lequel les variables $x \in
 
 ```{r}
 ## comment 1 : help(nnet::nnet)
-  mod_nnet <- nnet::nnet(change_input, 
-                         change_output, 
+  mod_nnet <- nnet::nnet(x, 
+                         y, 
                          size = 1, 
                          trace = FALSE)
 
-  prob_class <- mod_nnet %>% deus_ex_machina()
+  prob_class <- mod_nnet %>% predict()
 
 ## calcule l'erreur de classification  
   cat("Erreur de classification :\n")
@@ -102,11 +102,11 @@ On considère un jeu de données unidimensionel dans lequel les variables $x \in
 ```{r}
 # comment 1
   x_test <- seq(-2, 2, length = 200)
-  pred_nnet <- x_test %>% as.matrix() %>% deus_ex_machina(mod_nnet,.)  
-    
+  pred_nnet <- x_test %>% as.matrix() %>% predict(mod_nnet,.)
+  
 ##
   plot(x, y, pch = 19, cex = .3, col = col)
-  points(x_test, pred, type = "l", lwd = 2, lty = 3, col = "grey")
+  points(x_test, pred_nnet, type = "l", lwd = 2, lty = 3, col = "grey")
 ```
 
 
@@ -125,7 +125,7 @@ On considère un jeu de données unidimensionel dans lequel les variables $x \in
 
 # comment 2
   f <- function(x, epsilon = 0.05){ 
-    return(change_moi*sigmoid((1-x)/epsilon) + change_me*sigmoid((x+1)/epsilon) - cambia_mi)
+    return(1*sigmoid((1-x)/epsilon) + 1*sigmoid((x+1)/epsilon) - 1)
   }
 ```
 
@@ -137,20 +137,20 @@ On considère un jeu de données unidimensionel dans lequel les variables $x \in
 
 ```{r}
 # A répéter éventuellement 
-  mod_nnet <- nnet::nnet(change_moi, 
-                         change_me, 
+  mod_nnet <- nnet::nnet(x, 
+                         y, 
                          size = 2, 
                          lin = TRUE,
                          decay = 0.0001,
                          trace = FALSE)
   summary(mod_nnet)
+  
 
 # comment 2  
-  plot(x_test, quo_vadis, type = "l", lwd = 2, col = "orange")
+  plot(x_test, f(x_test), type = "l", lwd = 2, col = "orange")
 
-  pred_class <- deus_ex_machina(mod_nnet, matrix(x_test))
+  pred_class <- predict(mod_nnet, matrix(x_test))
   points(x_test, pred_class, type = "l", lwd = 2, col = 4)
-
   legend(x= -2, y = 0.9, legend = c("f(x)", "nnet"), 
        col = c("orange", "blue"), lty = 1, cex = .7)
 ```
@@ -161,9 +161,9 @@ On considère un jeu de données unidimensionel dans lequel les variables $x \in
 
 ```{r}
 # comment
-  prob_class <- mod_nnet %>% deus_ex_machina()
+  prob_class <- mod_nnet %>% predict()
   cat("Erreur de classification :\n")
-  mean( y != change_moi )
+  mean( y != (prob_class > 0.5) )
 ```
 
 
@@ -177,9 +177,9 @@ Cet exercice n'a pas d'autre prétention que de faire manipuler par l'exemple l'
 Pour cela, il est nécessaire d'installer localement la bibliothèque de programmes **Tensorflow** développée par la compagnie Google. Cette installation locale dans votre répertoire de travail (*../.virtualenvs*) occupera une place conséquente (0.5G). Pensez à faire le ménage en fin de semestre !
 
 ```{r}
-#install.packages("keras")
+# install.packages("keras")
 library(keras)
-install_keras()
+# install_keras()
 ```
 
 Nous utilisons des données simulées à l'aide du générateur aléatoire `rhastib`.  Simuler 200 données d'apprentissage, 200 données de tests en utilisant 10 sous-classes et une la variance interne aux sous-classes fixée à $\sigma^2 = 0.05$. Visualiser les données colorées par leurs valeurs de classe. On commentera les codes proposés dans les espaces laissés pour les commentaires (dièses).
@@ -341,12 +341,12 @@ Lire les données MNIST. Il y a 4 ensembles de variables.
 ```{r}
 # comment 1
 
-  boo_tr <- y_train == change_me | y_train == change_moi | y_train == cambia_mi 
+  boo_tr <- y_train == 1 | y_train == 2 | y_train == 7 
   x_train <- mnist$train$x[boo_tr,,]
   y_train <- mnist$train$y[boo_tr]
 
 # comment 2
-  boo_te <- y_test == change_me | y_test == change_moi | y_test == cambia_mi 
+  boo_te <- y_test == 1 | y_test == 2 | y_test == 7 
   x_test <- mnist$test$x[boo_te,,]
   y_test <- mnist$test$y[boo_te]
 ```
@@ -405,18 +405,18 @@ Lire les données MNIST. Il y a 4 ensembles de variables.
     layer_dense(units = 3, activation = 'softmax')
 
 # commenter les lignes suivantes  
-  model %>% ex_nihilo_nihil(
-    loss = 'also_sprach_zarathustra',
+  model %>% compile(
+    loss = 'categorical_crossentropy',
     optimizer = optimizer_rmsprop(lr = 0.001, decay = 0),
-    metrics = c('taux_de_bonne_classification')
-)
+    metrics = c('accuracy')
+  )
 ```
 
 
 * Hey ho, allons-y pour ajuster le réseau
 
 ```{r, include = FALSE}
-  history <- carpe_diem %>% fit(
+  history <- model %>% fit(
                         x_train, 
                         y_train, 
                         epochs = 20, 
@@ -436,7 +436,7 @@ plot(history)
 
 
 ```{r}
-model %>% ex_nihilo_nihil(x_test, y_test)
+model %>% evaluate(x_test, y_test)
 ```
 
 
@@ -444,7 +444,7 @@ model %>% ex_nihilo_nihil(x_test, y_test)
 
 ```{r}
 pred_class <- model %>% predict_classes(x_test)
-quod_errat_demonstratum(pred_class, mnist$test$y[boo_te])
+table(pred_class, mnist$test$y[boo_te])
 ```
 
 
@@ -463,7 +463,61 @@ Pour les données de l'exercice précédent, répondre aux questions suivantes.
 Inclure dans tableau une colonne indiquant le nom de chaque modele. Par exemple, un modèle à 2 couches cachées, 10 neurones par couche et une valeur "dropout" de 0.2 pourra s'appeler "modele_2_10_2"
 
 ```{r}
-paste(c("modele", 2, 10, 2), collapse = "_")
+mnist <- dataset_mnist()
+
+x_train <- mnist$train$x
+y_train <- mnist$train$y
+x_test <- mnist$test$x
+y_test <- mnist$test$y
+
+boo_tr <- y_train == 1 | y_train == 2 | y_train == 7 
+x_train <- mnist$train$x[boo_tr,,]
+y_train <- mnist$train$y[boo_tr]
+
+boo_te <- y_test == 1 | y_test == 2 | y_test == 7 
+x_test <- mnist$test$x[boo_te,,]
+y_test <- mnist$test$y[boo_te]
+
+# reshape
+x_train <- array_reshape(x_train, c(nrow(x_train), 784))
+x_test <- array_reshape(x_test, c(nrow(x_test), 784))
+
+# rescale
+x_train <- x_train/255
+x_test <- x_test/255
+
+y_train <- y_train %>% factor() %>% as.integer() %>% -1 %>% to_categorical(3)
+y_test <-  y_test %>% factor() %>% as.integer() %>% -1 %>% to_categorical(3)
+```
+
+```{r}
+paste(c("modele", 2, 10, 3), collapse = "_")
+model <- keras_model_sequential() 
+model %>% 
+    layer_dense(units = 10, activation = 'relu', input_shape = 784) %>% 
+    layer_dropout(rate = 0.2) %>% 
+    layer_dense(units = 10, activation = 'relu') %>%
+    layer_dropout(rate = 0.2) %>%
+    layer_dense(units = 10, activation = 'relu') %>%
+    layer_dropout(rate = 0.2) %>%
+    layer_dense(units = 3, activation = 'softmax')
+
+model %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_rmsprop(lr = 0.001, decay = 0),
+  metrics = c('accuracy')
+)
+
+
+history <- model %>% fit(
+  x_train, 
+  y_train, 
+  epochs = 20, 
+  batch_size = 128, 
+  validation_split = 0.2
+)
+
+model %>% evaluate(x_test, y_test)
 ```
 
 
