@@ -491,38 +491,66 @@ y_test <-  y_test %>% factor() %>% as.integer() %>% -1 %>% to_categorical(3)
 ```
 
 ```{r}
-paste(c("modele", 2, 10, 3), collapse = "_")
-model <- keras_model_sequential() 
-model %>% 
-    layer_dense(units = 10, activation = 'relu', input_shape = 784) %>% 
-    layer_dropout(rate = 0.2) %>% 
-    layer_dense(units = 10, activation = 'relu') %>%
-    layer_dropout(rate = 0.2) %>%
-    layer_dense(units = 10, activation = 'relu') %>%
-    layer_dropout(rate = 0.2) %>%
-    layer_dense(units = 3, activation = 'softmax')
+cpt <- 0
+names = NULL
+loss = NULL
+acc = NULL
 
-model %>% compile(
-  loss = 'categorical_crossentropy',
-  optimizer = optimizer_rmsprop(lr = 0.001, decay = 0),
-  metrics = c('accuracy')
-)
+for (i in seq(1, 3)){
+  for (j in c(10, 100)){
+    for (k in c(0.2, 0.5)){
+      cpt <- cpt + 1
+      names[cpt] <- paste(c("modele", i, j, k*10), collapse = "_")
+      print(names[cpt])
+      
+      model <- keras_model_sequential() 
+      model %>% 
+      layer_dense(units = 256, activation = 'relu', input_shape = 784)
+      
+      if(i > 1){
+        for (a in seq(1, i-1)){
+          model %>% 
+          layer_dropout(rate = k) %>% 
+          layer_dense(units = j, activation = 'relu')
+        }
+      }
+      
+      
+      model %>% 
+      layer_dropout(rate = 0.2) %>%
+      layer_dense(units = 3, activation = 'softmax')
+      
+      model %>% compile(
+        loss = 'categorical_crossentropy',
+        optimizer = optimizer_rmsprop(lr = 0.001, decay = 0),
+        metrics = c('accuracy')
+      )
+      
+      history <- model %>% fit(
+        x_train,
+        y_train,
+        epochs = 20,
+        batch_size = 128,
+        validation_split = 0.2
+      )
+      
+      eval <- (model %>% evaluate(x_test, y_test))
+      loss[cpt] <- eval$loss
+      acc[cpt] <- eval$acc
+    }
+  }
+}
+```
 
-
-history <- model %>% fit(
-  x_train, 
-  y_train, 
-  epochs = 20, 
-  batch_size = 128, 
-  validation_split = 0.2
-)
-
-model %>% evaluate(x_test, y_test)
+```{r}
+data.frame(row.names=names, acc,loss)
+barplot(loss, col = 2:4, ylab = "log loss")
+barplot(acc, col = 2:4, ylab = "accuracy") 
 ```
 
 
 
 * Quel modèle de prédiction vous parait être le meilleur ? 
 
-
+Le modèle 1 couche caché, et 0.5
 
