@@ -99,6 +99,7 @@ Nous voyons que le terme d'indice 2 n'a pas été filtré correctement (nous l'e
 
 ```{r}
   index[o[document13]] %>%  names() %>% table()
+  index[o[document13]] %>%  names()
 ```
 
 Le document 13 contient les termes "beautiful", "happy",  "interesting", "love", "laugh" mais aussi "rubbish" et "sad". On peut penser qu'il est plutôt associé à une opinion positive (valeur 0). Cela se vérifie en affichant la variable $y$.
@@ -120,56 +121,59 @@ Pour la suite, c'est à vous de jouer.
 
 ```{r}
   # comment 1
-  help(sapply)
-  sapply(49:2048, FUN = function(x) cogito_ergo_sum )
+  # help(sapply)
+  sapply(49:2048, FUN = function(x) sum(document13 == x))
 ```
 
 
 
 * Constituer un jeu de données comportant 10000 documents choisis pour moitié dans l'ensemble "train" et pour moitié dans l'ensemble "test" de l'IMBD. Techniquement nous le constituerons en 20 étapes, pour limiter l'impact sur la mémoire. Commenter et exécuter le code suivant
+```{r}
 
+```
 
 ```{r}
 x_imbd <- NULL
 
-  for (i in 1:10){
+for (i in 1:10){
+  
+  x_imbd_500 <- NULL
     
-    x_imbd_500 <- NULL
-    
-      for (j in (500*(i-1)+1):(500*i)){
-        
-        # comment 1
-        
-        doc_temp <- imbd$train$x[[j]]
-        x_imbd_500 <- rbind(x_imbd_500, 
-                         sapply(49:2048, 
-                                FUN = function(ind) sum(doc_temp == ind)))
-        
-        if (j%%500 == 0) print(j) # ca rassure
-    }
-    x_imbd <- rbind(x_imbd, x_imbd_500)
+    for (j in (500*(i-1)+1):(500*i)){
+      
+      # x_imdb_500 reçoit pour chaque document de chaque paquets de 500 documents du total des 5000 documents, les occurences des 2000 mots les plus fréquents. (Autrement dit 10000000 mots par itération). Ensuite on ajoute le total dans x_imbd (10000000 mots en 5000 documents)
+      
+      doc_temp <- imbd$train$x[[j]]
+      x_imbd_500 <- rbind(x_imbd_500, 
+                       sapply(49:2048, 
+                              FUN = function(ind) sum(doc_temp == ind)))
+      
+      if (j%%500 == 0) print(j) # ca rassure
   }
+  x_imbd <- rbind(x_imbd, x_imbd_500)
+}
 
- for (i in 1:10){
-   
-    x_imbd_500 <- NULL
-    
-      for (j in (500*(i-1)+1):(500*i)){
-        
-        # comment 2
-        
-        doc_temp <- imbd$test$x[[j]]
-        x_imbd_500 <- rbind(x_imbd_500, 
-                         sapply(49:2048, 
-                                FUN = function(ind) sum(doc_temp == ind)))
-        
-        if (j%%500 == 0) print(j) # ca rassure
-    }
-    x_imbd <- rbind(x_imbd, x_imbd_500)
+for (i in 1:10){
+ 
+  x_imbd_500 <- NULL
+  
+    for (j in (500*(i-1)+1):(500*i)){
+      
+      # x_imdb_500 reçoit pour chaque document de chaque paquets de 500 documents du total des 5000 documents, les occurences des 2000 mots les plus fréquents. (Autrement dit 10000000 mots par itération). Ensuite on ajoute le total dans x_imbd (20000000 mots en 10000 documents) 
+      
+      doc_temp <- imbd$test$x[[j]]
+      x_imbd_500 <- rbind(x_imbd_500, 
+                       sapply(49:2048, 
+                              FUN = function(ind) sum(doc_temp == ind)))
+      
+      if (j%%500 == 0) print(j) # ca rassure
   }
+  x_imbd <- rbind(x_imbd, x_imbd_500)
+}
 ```
-
 * Que contient l'objet `x_imbd` ?
+
+x_imdb contient 2 000 000 de mots les 2000 plus fréquents de chaque document des 10000 documents.
 
 * Pour représenter les classes 0 et 1 en format matriciel, on peut utiliser la fonction `to_categoretical()` de `keras`. C'est plus simple.
 
@@ -179,7 +183,9 @@ x_imbd <- NULL
 ```
 
 Et voilà. On est en pleine forme et on dispose d'une base d'apprentissage comportant les fréquences d'apparition des mots de l'index pour 10000 documents (`x_train`) et les opinions des utilisateurs `y_train`. Le TP peut vraiment commencer.
-
+```{r}
+index[o[which(r2 > 0.02) + 45]]
+```
 
 #### Etude d'association
 
@@ -190,12 +196,12 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 ```{r}
   # comment
   x <- x_imbd[,-2000]
-  
+
   # comment
   y <- y_imbd[,1]
   
   # comment
-  r2 <- trouve_moi^2
+  r2 <- cor(x, y)^2
 ```
 
 
@@ -203,8 +209,12 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 
 ```{r}
+  
   # quelque chose à changer
-  index[o[ which(r2 > 0.02) + 45 ]] %>% names()
+  # index[o[ which(r2 > 0.03) + 45 ]] %>% names()
+  # index[o[ which(r2 > 0.02) + 45 ]] %>% names()
+  # index[o[ which(r2 > 0.005) + 45 ]] %>% names()
+  head(index[o[ which(r2 > 0.02) + 45 ]])
 ```
 
 * Dans quelles proportions les termes de valeur d'association $r^2$ supérieure à 0.02 apparaissent-ils dans les documents ? Représenter graphiquement ces proportions  à l'aide d'un diagramme en barre. 
@@ -212,7 +222,7 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 ```{r}
 # Calculer la frequence des termes realisant la condition
-  freq <- x[, conditio_logicae ] %>% apply(2, mean) 
+  freq <- x[, which(r2 > 0.02) + 45] %>% apply(2, mean) 
 
 # mots dans l'index et barplot
   names(freq) <-  index[o[which(r2 > 0.02) + 45]] %>% names() 
@@ -225,7 +235,15 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 
 ```{r}
-  yes_we_can
+# Calculer la frequence des termes realisant la condition
+
+  doc_pos = x[which(y == 1)]
+  doc_pos
+  freq <- x[, which(r2 > 0.02) + 45] %>% apply(2, mean) 
+
+# mots dans l'index et barplot
+  names(freq) <-  index[o[which(r2 > 0.02) + 45]] %>% names() 
+  barplot(freq, col = "lightblue", las = 2)
 ```
 
 

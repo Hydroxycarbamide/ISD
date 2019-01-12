@@ -49,6 +49,7 @@ On prendra soin de commenter les codes R tout au long des questions du TP. Il es
 #devtools::install_github("bcm-uga/isd")
 library(isd)
 library(magrittr)
+set.seed(1000)
 ```
 
 
@@ -490,7 +491,7 @@ y_train <- y_train %>% factor() %>% as.integer() %>% -1 %>% to_categorical(3)
 y_test <-  y_test %>% factor() %>% as.integer() %>% -1 %>% to_categorical(3)
 ```
 
-```{r}
+```{r, include=FALSE}
 cpt <- 0
 names = NULL
 loss = NULL
