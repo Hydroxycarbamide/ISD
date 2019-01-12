@@ -23,14 +23,80 @@ Le dépot comportera en plus du fichier intitulé "Rendu_TP5.html"
 
 - Un script R, contenant une fonction permettant d'évaluer le modèle.
  
- 
+```{r}
+library(magrittr)
+library(keras)
+```
 
 ** **
 ## Exercice : Défi analyse d'opinion (IMDB)
 
 #### Analyse d'association
 
+```{r}
+# IMDB Word Index
+index <- keras::dataset_imdb_word_index()
+
+# Sorted
+o <- as.numeric(index) %>% order()
+
+# Documents
+imbd <- keras::dataset_imdb(path = "imdb.npz", 
+                            num_words = 2048, 
+                            skip_top = 48)
+document13 <- imbd$train$x[[13]]
+
+
+x_imbd <- NULL
+for (i in 1:10){
+  x_imbd_500 <- NULL
+  for (j in (500*(i-1)+1):(500*i)){
+    
+    # x_imdb_500 reçoit pour chaque document de chaque paquets de 500 documents du total des 5000 documents, les occurences des 2000 mots les plus fréquents. (Autrement dit 10000000 mots par itération). Ensuite on ajoute le total dans x_imbd (10000000 mots en 5000 documents)
+    
+    doc_temp <- imbd$train$x[[j]]
+    x_imbd_500 <- rbind(x_imbd_500, sapply(49:2048, FUN = function(ind) sum(doc_temp == ind)))
+    if (j%%500 == 0) print(j)
+  }
+  x_imbd <- rbind(x_imbd, x_imbd_500)
+}
+
+for (i in 1:10){
+  x_imbd_500 <- NULL
+  for (j in (500*(i-1)+1):(500*i)){
+    
+    # x_imdb_500 reçoit pour chaque document de chaque paquets de 500 documents du total des 5000 documents, les occurences des 2000 mots les plus fréquents. (Autrement dit 10000000 mots par itération). Ensuite on ajoute le total dans x_imbd (20000000 mots en 10000 documents) 
+    
+    doc_temp <- imbd$test$x[[j]]
+    x_imbd_500 <- rbind(x_imbd_500, sapply(49:2048,FUN = function(ind) sum(doc_temp == ind)))
+    if (j%%500 == 0) print(j) # ca rassure
+  }
+  x_imbd <- rbind(x_imbd, x_imbd_500)
+}
+
+
+y_imbd <- to_categorical(imbd$train$y[1:5000], 2)
+y_imbd <- rbind(y_imbd, to_categorical(imbd$test$y[1:5000], 2))
+```
+
 * Dans quelles proportions les termes de valeur d'association $r^2$ supérieure à 0.02 apparaissent-ils dans les documents ? Représenter graphiquement ces proportions  à l'aide d'un diagramme en barre. 
+```{r}
+  # Fréquences d'apparition des termes de l'index
+  x <- x_imbd[,-2000]
+
+  # Opinion des utilisateurs
+  y <- y_imbd[,1]
+  
+  # Calcul du coefficient de correlation au carre des deux ensembles
+  r2 <- cor(x, y)^2
+  
+# Calcul de la frequence des termes realisant la condition
+  freq <- x[, which(r2 > 0.02) + 45] %>% apply(2, mean) 
+
+# Diagramme en barre réalisant la conditions
+  names(freq) <-  index[o[which(r2 > 0.02) + 45]] %>% names() 
+  barplot(freq, col = "lightblue", las = 2)
+```
 
 * Dans quelles proportions les termes de valeur d'association $r^2$ supérieure à 0.02 apparaissent-ils dans les documents **à connotation positive** ? Représenter graphiquement ces proportions  à l'aide d'un diagramme en barre.
 

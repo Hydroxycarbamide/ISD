@@ -262,6 +262,7 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 * \`A l'aide des outils vus dans les séances précédentes, tels que _keras_, _lda_, _nnet_, ou d'autres bibliothèques de programmes que vous pourriez trouver dans R, ajuster des modèles d'apprentissage aux données contenues dans le TP : "x_imbd" et "y_imbd".
 
+
 * Dans un tableau, décrire les performances des méthodes choisies pour des échantillons d'apprentissage et de test que vous aurez créés vous-mêmes. Les performances seront mesurées par les erreurs de classification et d'entropie (log loss).
 
 * Sauver votre modèle dans un format compressé (RDS ou HDF5 pour `keras`). Remplacer la chaîne de caractère "my_login" par votre propre login ensimag. 

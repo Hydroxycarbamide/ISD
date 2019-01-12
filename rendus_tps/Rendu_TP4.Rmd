@@ -21,32 +21,305 @@ output:
 
 ** **
 
+```{r}
+#install.packages("devtools")
+#devtools::install_github("bcm-uga/isd")
+library(isd)
+library(magrittr)
+set.seed(1000)
+```
+
 
 #### Exercice 1:  
 
 * Construire une fonction mathématique correspondant à un réseau ayant deux neurones cachés, permettant d'approcher la probabilité conditionnelle $p(y=1|x)$ de manière arbitrairement précise.
 
+```{r}
+# Calcul de la valeur du sigmoid
+  sigmoid <- function(x){
+    if (!is.numeric(x)) stop("x must be numeric.")
+    return( 1/(1+exp(-x)) )
+  }
+
+# Calcul de la formule mathématique (à 2 neuronnes cachés)
+  f <- function(x, epsilon = 0.05){ 
+    return(1*sigmoid((1-x)/epsilon) + 1*sigmoid((x+1)/epsilon) - 1)
+  }
+```
+
 * Vérifier le résultat en ajustant un réseau à deux neurones avec la bibliothèque `nnet`. Représenter graphiquement les valeurs prédites par le réseau de neurones et superposer la courbe de la fonction mathématique proposée.
 
+```{r}
+
+# Création d'un ensemble à distribution uniforme entre -2 et 2
+  n <- 500 
+  x <- runif(n, -2, 2)
+
+# y = 1 si x est  entre [-1, 1] sinon 0
+  y <- x >= -1 & x <= 1
+
+# Création d'un réseaux de neuronnes à 2 couches cachés
+  mod_nnet <- nnet::nnet(x, 
+                         y, 
+                         size = 2, 
+                         lin = TRUE,
+                         decay = 0.0001,
+                         trace = FALSE)
+#  summary(mod_nnet)
+  
+
+# Affichage de la courbe de la fonction f approchant la probabilité conditionnelle
+  x_test <- seq(-2, 2, length = 200)
+  plot(x_test, f(x_test), type = "l", lwd = 2, col = "orange")
+
+# Affichage des valeurs prédites 
+  pred_class <- predict(mod_nnet, matrix(x_test))
+  points(x_test, pred_class, type = "l", lwd = 2, col = 4)
+  
+# Légendes
+  legend(x= -2, y = 0.9, legend = c("f(x)", "nnet"), 
+       col = c("orange", "blue"), lty = 1, cex = .7)
+```
+
 *  Pour l'échantillon d'apprentissage, calculer l'erreur de classification du réseau de neurones à 2 neurones cachés ajusté à la question précédente.
+
+```{r}
+# Erreur de classification : On vérifie si l'approchement des valeurs prédites correspondent aux v
+  prob_class <- mod_nnet %>% predict()
+  cat("Erreur de classification :\n")
+  mean( y != (prob_class > 0.5) )
+```
 
 #### Exercice 2: 
 
 * Visualiser un historique d'entrainement d'un réseau de neurones. On choisira 100 neurones par exemple.
 
+```{r, include=FALSE}
+# install.packages("keras")
+library(keras)
+# install_keras()
+
+# On crée 2 ensembles (test et apprentissage) de chacun 200 élèments sous la loi gaussiène.
+x <- rhastib(n_train = 200,
+               n_test = 200,
+               n_subclass = 10,
+               sigma2 = 0.05)
+
+
+# On renomme
+x_train <- x$train
+y_train <- x$class_train
+
+x_test <- x$test
+y_test <- x$class_test
+
+# On répartie chaque valeur des 2 ensemble en 2 catégorie ("est orange" vs "ne l'est pas")
+y_train <- (y_train == "orange") %>% as.integer()  %>% to_categorical(2)
+y_test <- (y_test == "orange") %>% as.integer()  %>% to_categorical(2)
+
+
+
+## On définie notre modèle séquentiel (100 neuronnes, 0 couche cachée)
+model <- keras_model_sequential() 
+model %>% 
+    layer_dense(units = 100, activation = 'relu', input_shape = 2) %>% 
+    layer_dropout(rate = 0.1) %>% 
+    layer_dense(units = 2, activation = 'softmax')
+  
+## On redéfinie le modèle pour obtenir les valeurs voulues (logloss, accuracy)
+model %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_rmsprop(lr = 0.001, decay = 0.001),
+  metrics = c('accuracy')
+)
+
+## On applique l'entrainement sur 20 générations
+history <- model %>% fit(
+                    x_train, 
+                    y_train, 
+                    epochs = 20,
+                    batch_size = 2,
+                    validation_split = 0.1
+)
+ 
+plot(history) 
+```
+
 * Evaluer le modèle précédent en reportant les erreurs de classification et de perte log loss obtenues pour votre ensemble test.
+
+```{r}
+# Evaluate permet d'obtenir l'erreur de classification et la perte logloss de la dernière génération
+model %>% evaluate(x_test, y_test)
+```
 
 * Visualiser la frontière prédite entre les deux classes orange et bleue pour votre ensemble test.
 
 
+```{r}
+## discretisation de l'ensemble d'étude 
+
+  x1_coord <- seq(min(x$train[,1]), max(x$train[,1]), length = 100)
+  x2_coord <- seq(min(x$train[,2]), max(x$train[,2]), length = 100)
+
+  matrice_test <- cbind(rep(x1_coord, length = 100), 
+                       rep(x2_coord, each = 100))
+  
+## Récupération des probabilités prédites
+
+  prob_class <- model %>% predict_proba(matrice_test)
+  prob_class <- prob_class[,2] %>% matrix(nrow = 100)
+  
+## Génération de l'image
+  # Répartitions des données en niveau de gris + légendes
+  image(x1_coord, x2_coord, prob_class, col = grey.colors(10), main = "keras ANN")
+  # Frontière
+  contour(x1_coord, x2_coord, prob_class, levels = c(0.5), col = "yellow", lwd = 3, add = TRUE)
+  # Données
+  points(x$train, col = x$class_train)
+```
+
 #### Exercice 3:  Défi "MNIST 1-2-7" 
+
+```{r}
+# Chargement des données MNIST et attribution des valeurs testés et d'apprentissages
+  mnist <- dataset_mnist()
+  x_train <- mnist$train$x
+  y_train <- mnist$train$y
+  x_test <- mnist$test$x
+  y_test <- mnist$test$y
+```
 
 * Reporter dans un tableau 12x2, les valeurs des erreurs de classification et de logloss obtenues sur l'ensemble test pour 12 réseaux de neurones distincts dont on aura fait varier les paramètres (nombre de couches cachées : 1 à 3, nombre de neurones par couche cachée : 10 et 100, valeurs de dropout : 0.2 et 0.5)
 
+```{r}
 
+# Filtrage des données que l'on veut tester (1, 2, 7)
+boo_tr <- y_train == 1 | y_train == 2 | y_train == 7 
+x_train <- mnist$train$x[boo_tr,,]
+y_train <- mnist$train$y[boo_tr]
+boo_te <- y_test == 1 | y_test == 2 | y_test == 7 
+x_test <- mnist$test$x[boo_te,,]
+y_test <- mnist$test$y[boo_te]
+
+# reshape en vecteur (28*28 = 784)
+x_train <- array_reshape(x_train, c(nrow(x_train), 784))
+x_test <- array_reshape(x_test, c(nrow(x_test), 784))
+
+# rescale de chaque valeur d'interval [0, 255] à un interval [0, 1]
+x_train <- x_train/255
+x_test <- x_test/255
+
+y_train <- y_train %>% factor() %>% as.integer() %>% -1 %>% to_categorical(3)
+y_test <-  y_test %>% factor() %>% as.integer() %>% -1 %>% to_categorical(3)
+```
+
+```{r, include=FALSE}
+cpt <- 0
+names = NULL
+loss = NULL
+acc = NULL
+
+for (i in seq(1, 3)){
+  for (j in c(10, 100)){
+    for (k in c(0.2, 0.5)){
+      cpt <- cpt + 1
+      
+      # Nom du modèle
+      names[cpt] <- paste(c("modele", i, j, k*10), collapse = "_")
+      print(names[cpt])
+      
+      # On génère notre modèle séquentiel
+      model <- keras_model_sequential() 
+      model %>% 
+      layer_dense(units = j, activation = 'relu', input_shape = 784)
+      
+      # Application des couches cachées s'il y en a
+      if(i > 1){
+        for (a in seq(1, i-1)){
+          model %>% 
+          layer_dropout(rate = k) %>% 
+          layer_dense(units = j, activation = 'relu')
+        }
+      }
+      
+      # Couche de sortie
+      model %>% 
+      layer_dropout(rate = 0.2) %>%
+      layer_dense(units = 3, activation = 'softmax')
+      
+      # On redéfinie le modèle pour obtenir les valeurs voulues (logloss, accuracy)
+      model %>% compile(
+        loss = 'categorical_crossentropy',
+        optimizer = optimizer_rmsprop(lr = 0.001, decay = 0),
+        metrics = c('accuracy')
+      )
+      
+      # On applique l'entrainement sur 20 générations
+      history <- model %>% fit(
+        x_train,
+        y_train,
+        epochs = 20,
+        batch_size = 128,
+        validation_split = 0.2,
+        view_metrics = FALSE
+      )
+      
+      # Récupération des valeurs logloss et accuracy de la dernière génération
+      eval <- (model %>% evaluate(x_test, y_test))
+      loss[cpt] <- eval$loss
+      acc[cpt] <- eval$acc
+    }
+  }
+}
+```
+```{r}
+data.frame(row.names=names, acc,loss)
+barplot(loss, col = 2:4, ylab = "log loss")
+barplot(acc, col = 2:4, ylab = "accuracy") 
+```
 * Quel modèle de prédiction vous parait être le meilleur ? 
+```{r}
+names[which(min(loss) == loss)]
+```
+
+On remarque que la précision importe peu car elle est élevée pour chaque génération
+Le modèle avec 1 couche de neurones, 100 neuronnes, et 0.2 en valeur de dropout.
 
 * Pour ce modèle, quelles sont les erreurs de classification les plus fréquentes ? Quantifier ces erreurs.
 
+```{r, include=FALSE}
+
+model <- keras_model_sequential() 
+model %>% 
+  layer_dense(units = j, activation = 'relu', input_shape = 784) %>%
+  layer_dropout(rate = 0.2) %>%
+  layer_dense(units = 3, activation = 'softmax')
+
+# On redéfinie le modèle pour obtenir les valeurs voulues (logloss, accuracy)
+model %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_rmsprop(lr = 0.001, decay = 0),
+  metrics = c('accuracy')
+)
+
+# On applique l'entrainement sur 20 générations
+history <- model %>% fit(
+  x_train,
+  y_train,
+  epochs = 20,
+  batch_size = 128,
+  validation_split = 0.2,
+  view_metrics = FALSE
+)
+```
+```{r}
+# Récupération des valeurs logloss et accuracy de la dernière génération
+eval <- (model %>% evaluate(x_test, y_test))
+
+# Matrice de confusion pour vérifier les valeurs incorrectes
+pred_class <- model %>% predict_classes(x_test)
+table(pred_class, mnist$test$y[boo_te])
+```
+On remarque que les erreurs de classification les plus fréquentes sont sur le chiffre 7.
 
 
