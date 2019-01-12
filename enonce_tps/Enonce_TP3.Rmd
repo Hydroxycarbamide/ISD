@@ -77,7 +77,8 @@ help(rhastib)
                     n_subclass = 10,
                     sigma2 = 0.05)
 
-#
+# On affiche l'échantillon dédiés à l'apprentissage en orange et l'échantillon dédié au test en bleu
+
   plot(x$train, pch = 19, col = x$class_train)
   plot(x$test, pch = 19, col = x$class_test)
 ```
@@ -87,28 +88,28 @@ help(rhastib)
 
 ```{r}
 library(class)
-help(knn)
+# help(knn)
 
-#
-  mod_knn <- knn( train = what_the_f, 
+# Méthode k-plus proches voisins de l'ensemble test récupérant 10 voisins entre l'ensemble test et l'ensemble d'apprentissage en fonction de la classification de test
+  mod_knn <- knn( train = x$train, 
                   test = x$test, 
-                  cl = change_me, 
-                  k = change_moi, 
+                  cl = x$class_train, 
+                  k = 10, 
                   prob = TRUE)
 
-# 
+# On considère la classification des points comme notre classification de prédiction (on récupère en plus, leur probabilités dans prob_class)
   class_pred <- mod_knn
   prob_class <- attr(mod_knn, "prob")
   
 # attention : les  probabilités correspondent aux classes prédites 
 ```
 
-
-* Pour $k = 1O$, calculer le taux de bonne classification et la perte logloss à partir de l'ensemble test.
+!!!!! 1(O) ou 10 ?
+Pour $k = 1O$, calculer le taux de bonne classification et la perte logloss à partir de l'ensemble test.
 
 ```{r}
 # Nombre moyen de bons classements 
-  accuracy <- mean(class_pred == truck_mich)
+  accuracy <- mean(class_pred == x$class_test)
   accuracy
 
 # log_loss = - mean(y*log(pred) + (1-y)*log(1-pred))
@@ -118,14 +119,13 @@ help(knn)
   
 # attention : les  probabilités correspondent aux classes prédites 
 # attention : il faut tenir compte de la classe des variables testées
-  log_loss <- pas_si_simple
+  log_loss <- - mean(log(prob_class[(class_pred == x$class_test)])) - mean(log(1 - prob_class[(class_pred == x$class_test)]))
   log_loss
 ```
 
 
 
-* Pour $k = 1,\dots, 30$, calculer le taux de bonne classification et la perte logloss à partir de l'ensemble test (on modifiera les probabilités pour éviter Inf). Représenter ces résultats sous la forme de graphes accuracy et logloss en fonction de $k$.
-
+Pour $k = 1,\dots, 30$, calculer le taux de bonne classification et la perte logloss à partir de l'ensemble test (on modifiera les probabilités pour éviter Inf). Représenter ces résultats sous la forme de graphes accuracy et logloss en fonction de $k$.
 
 ```{r}
 accuracy <- NULL
@@ -134,9 +134,9 @@ log_loss <-  NULL
 for (k in 1:30){
   
   #
-  mod_knn <- class::knn(train = what_the_f, 
+  mod_knn <- class::knn(train = x$train, 
                         test = x$test, 
-                        cl = change_me, 
+                        cl = x$class_train, 
                         k = k, 
                         prob = TRUE)
   
@@ -149,7 +149,7 @@ for (k in 1:30){
   prob_class[prob_class == 0] <- 1e-09 
 
   #
-  accuracy[k] <- mean(class_pred == truck_mich)
+  accuracy[k] <- mean(class_pred == x$class_test)
   
   boo <- (class_pred == x$class_test)
   log_loss[k] <- - mean(log(prob_class[boo])) - mean(log(1 - prob_class[!boo]))
@@ -158,10 +158,23 @@ for (k in 1:30){
 par(mfrow = c(1, 2)) # divise la fenetre en 1 ligne 2 colonnes
 plot(accuracy, col = "lightblue", type = "l", lwd = 3, xlab = "Nombre de voisins")
 plot(log_loss, col = "palegreen", type = "l", lwd = 3, xlab = "Nombre de voisins")
+
+# k meilleure précision
+k_max_accuracy = match(max(accuracy),accuracy)
+print(k_max_accuracy)
+print(c("accuracy: ", accuracy[k_max_accuracy]))
+print(c("logloss: ", log_loss[k_max_accuracy]))
+# k minimum perte
+k_min_log_loss = match(min(log_loss),log_loss)
+print(k_min_log_loss)
+print(c("accuracy: ", accuracy[k_min_log_loss]))
+print(c("logloss: ", log_loss[k_min_log_loss]))
 ```
 
 
 *  Quel choix de $k$ vous parait le plus pertinent pour obtenir les meilleures prédictions sur l'ensemble test ?
+
+D'après moi, pour $k = 10$, on trouve qu'il y a une meilleure précision sur la prédiction dans l'ensemble test. Mais pour $k = 13$, la perte est minimale dans $k \in ]1, 30]$.
 
 
 #### Exercice 2 (Analyse discriminante linéaire) : 30 minutes
@@ -176,14 +189,13 @@ require(MASS)
 help(lda)
 
 #
-    mod_lda <- MASS::lda(x = what_is_it, 
-                         grouping = was_is_das)
+    mod_lda <- MASS::lda(x = x$test, 
+                         grouping = x$class_test)
 
 help(predict.lda)
 
 #   
-    pred <- predict(mod_lda, newdata = nom_du_test_set)
-    
+    pred <- predict(mod_lda, newdata = x$test)
 # Les  probabilités correspondent aux classes des variables testées     
     prob_class <- pred$posterior
 
@@ -201,11 +213,11 @@ help(predict.lda)
 
 ```{r}
 #
-  accuracy <- mean(what_the_f == pred$class)
+  accuracy <- mean(x$class_test == pred$class)
   cat("Accuracy = ", accuracy, "\n")
   
 # 
-  log_loss <- -mean( (x$class_test == "lightblue")*log(change_me) + (x$class_test == "orange")*log(change_moi) )
+  log_loss <- -mean( (x$class_test == "lightblue")*log(1-prob_class) + (x$class_test == "orange")*log(prob_class) )
   cat("Logloss = ", log_loss, "\n")
 
 ```
@@ -228,9 +240,9 @@ help(nnet)
 
 #
   is_it_orange <- (x$class_train == "orange")
-  mod_nnet <- nnet( x = change_me, 
+  mod_nnet <- nnet( x = x$train, 
                     y = is_it_orange, 
-                    size = change_moi,
+                    size = 30,
                     decay = 0.01,
                     entropy = TRUE,
                     trace = FALSE)
@@ -239,8 +251,8 @@ help(nnet)
 help(predict.nnet)
 
 #  
-prob_class <- predict(ques_a_quo, newdata = data.frame(x$test))
-head(proba_class)
+prob_class <- predict(mod_nnet, newdata = data.frame(x$test))
+head(prob_class)
 ```
 
 
@@ -250,11 +262,11 @@ head(proba_class)
 
 ```{r}
 # 
-  accuracy <- mean(logical_to_test == (prob_class > 0.5))
+  accuracy <- mean(is_it_orange == (prob_class > 0.5))
   accuracy
 
 #  
-  log_loss <- - mean((x$class_test == "lightblue")*log(1 - prob_class)) - complete_la_formule
+  log_loss <- - mean((x$class_test == "lightblue")*log(1 - prob_class)) - mean((x$class_test == "orange")*log(prob_class))
   log_loss
 ```
 
@@ -275,7 +287,7 @@ log_loss <-  NULL
   for (lambda in decay){
     
     # neural net 
-    mod_nnet <- nnet( x = change_me, 
+    mod_nnet <- nnet( x = x$train, 
                       y = is_it_orange, 
                       size = 30,
                       decay = lambda,
@@ -284,18 +296,18 @@ log_loss <-  NULL
                       trace = FALSE)
     
     # probabilité de prédiction en orange
-    prob_class <- predict(comme_le_temps_passe, newdata = data.frame(x$test))
+    prob_class <- predict(mod_nnet, newdata = data.frame(x$test))
   
     prob_class[prob_class > 1 - 1e-08]  <- 1 - 1e-08
     prob_class[prob_class < 1e-08] <- 1e-08
   
     # 
     accuracy <- c(accuracy, 
-                  mean((x$class_test == "orange") == el_truc_rigolo))
+                  mean((x$class_test == "orange") == (prob_class > 0.5)))
   
     # calul de la perte log loss
     log_loss <- c( log_loss, 
-                - mean((x$class_test == "lightblue")*log(1 - prob_class)) - mean((x$class_test == "orange")*log(cambia_mi)) ) 
+                - mean((x$class_test == "lightblue")*log(1 - prob_class)) - mean((x$class_test == "orange")*log(prob_class)) ) 
 }
 ```
 
@@ -353,9 +365,9 @@ head(BreastCancer)
 # sample : 
   cancer_samp <- sample(1:nrow(breast_cancer), 546)
 
-#
-  cancer_train <- breast_cancer[quelque_chose_de_tennessee,]
-  cancer_test <- breast_cancer[-quelque_chose_de_tennessee,]
+# On retranche les données en ensembles de tests (cancer_test) et d'apprentissage (cancer_train)
+  cancer_train <- breast_cancer[(0:546),]
+  cancer_test <- breast_cancer[-(0:546),]
 ```
 
 
@@ -367,16 +379,20 @@ Pour l'analyse discriminante, compléter et commenter le code suivant.
 
 ```{r}
 
-    # lda
-      mod_lda <- MASS::lda(change_me  ~ ., data = cancer_train[,-10])
+    # lda de l'ensemble d'apprentissage
+      mod_lda <- MASS::lda(cancer_train$Class ~ ., data = cancer_train[,-10])
 
+    # probabilité à priori de l'ensemble d'apprentissage
       pred_lda <- predict(mod_lda, newdata = cancer_test[,-10])$class
+
+    # précision entre les 2 ensemble (apprentissage et test)
+      accuracy_lda <- mean(pred_lda == cancer_test$Class)
       
-      accuracy_lda <- mean(change_moi == cancer_test$Class)
+    # probabilité de l'ensemble testé
+      prob_lda <- predict(mod_lda, newdata = cancer_test[,-10])$posterior
       
-      prob_lda <- predict(whaaat_again, newdata = cancer_test[,-10])$posterior
-      
-      log_loss_lda <- -mean((cancer_test$Class == "benign")*log(ron_tud_ju) + (cancer_test$Class == "malignant")*log(m_enfin)) 
+    # logloss 
+      log_loss_lda <- -mean((cancer_test$Class == "benign")*log(1 - prob_lda) + (cancer_test$Class == "malignant")*log(prob_lda))
       
       accuracy_lda
       log_loss_lda
@@ -386,25 +402,27 @@ Pour un réseau de neurones, compléter et commenter le code suivant.
 
 ```{r}
     # nnet
-      y <-  as.numeric(cancer_train$Class == "malignant")
-      
-      mod_nnet <- nnet::nnet(x = cancer_train[,-10], 
-                             y = change_me, 
-                             size = 30,
-                             entropy = TRUE, 
-                             decay = 0.01, 
-                             trace = FALSE)
-      
-      prob_nnet <- predict(mod_nnet, change_moi[,-10])
-      prob_nnet[prob_nnet == 0] <- 1e-08
-      prob_nnet[prob_nnet == 1] <- 1 - 1e-08
-      
-      accuracy_nnet <- mean(c_est_pas_faux == (cancer_test$Class == "malignant"))
+  require(nnet)
+  y <-  as.numeric(cancer_train$Class == "malignant")
+  
+  mod_nnet <- nnet::nnet(x = cancer_train[,-10], 
+                         y = y, 
+                         size = 30,
+                         entropy = TRUE, 
+                         decay = 0.01, 
+                         trace = FALSE)
+  
+  prob_nnet <- predict(mod_nnet, cancer_test[,-10])
+  
+  prob_nnet[prob_nnet == 0] <- 1e-08
+  prob_nnet[prob_nnet == 1] <- 1 - 1e-08
+  
+  accuracy_nnet <- mean((prob_nnet > 0.5) == (cancer_test$Class == "malignant"))
 
-      log_loss_nnet <- -mean((cancer_test$Class == "benign")*log(1 - prob_nnet) + (cancer_test$Class == "malignant")*log(pas_changer_assiette)) 
-      
-      accuracy_nnet
-      log_loss_nnet
+  log_loss_nnet <- -mean((cancer_test$Class == "benign")*log(1 - prob_nnet) + (cancer_test$Class == "malignant")*log(prob_nnet)) 
+  
+  accuracy_nnet
+  log_loss_nnet
 ```
 
 
@@ -414,15 +432,18 @@ Pour la méthode des $k$ plus proches voisins, compléter et commenter le code s
     # knn
      mod_knn <- class::knn(cancer_train[,-10], 
                             cancer_test[,-10], 
-                            change_me$Class, 
+                            cancer_train$Class, 
                             k = 15, 
                             prob = TRUE)
-
-      accuracy_knn <- mean(mod_knn == cancer_test$change_moi)
+      
+      accuracy_knn <- mean(mod_knn == cancer_test$Class)
+      accuracy_knn
+      
       prob_class <- attr(mod_knn, "prob")
       prob_class[prob_class == 1] <-  1 - 1e-08
       
-      log_loss_knn <- - mean( (mod_knn == cancer_test$Class)*log(c_est_pas_faux) + (mod_knn != cancer_test$Class)*log(pas_changer_assiette) )
+      log_loss_knn <- - mean( (mod_knn == cancer_test$Class)*log(prob_class) + (mod_knn !=     cancer_test$Class)*log(1 - prob_class) )
+      log_loss_knn
 ``` 
 
 
@@ -432,13 +453,13 @@ Pour la méthode des $k$ plus proches voisins, compléter et commenter le code s
 
 
 ```{r}
-  log_loss <-  c(il_faut_3_valeurs_séparées_par_des_virgules)
+  log_loss <-  c(log_loss_knn, log_loss_lda, log_loss_nnet)
 
   names(log_loss) <-  c("knn", "lda", "nnet")
   
   barplot(log_loss, col = 2:4, ylab = "log loss")
   
-  accuracy <- be_inspired
+  accuracy <- c(accuracy_knn, accuracy_lda, accuracy_nnet)
   
   names(accuracy) <-  c("knn", "lda", "nnet")
   
@@ -456,6 +477,68 @@ data.frame(log_loss, accuracy) %>% round(2)
 
 * Pour `knn` et `nnet`, explorer les paramètres de "complexité" ($k$ et `decay`) conduisant aux meilleures performances. Reporter les performances des modèles correspondant dans un tableau.
 
+```{r}
+    # knn
+  accuracy_knn = NULL
+  log_loss_knn = NULL
+  n = c(1:30)
+  for (k in n){
+    mod_knn <- class::knn(cancer_train[,-10], 
+                            cancer_test[,-10], 
+                            cancer_train$Class, 
+                            k = k, 
+                            prob = TRUE)
+      
+    accuracy_knn[k] <- mean(mod_knn == cancer_test$Class)
+    accuracy_knn[k]
+      
+    prob_class <- attr(mod_knn, "prob")
+    prob_class[prob_class == 1] <-  1 - 1e-08
+      
+    log_loss_knn[k] <- - mean( (mod_knn == cancer_test$Class)*log(prob_class) + (mod_knn !=     cancer_test$Class)*log(1 - prob_class) )
+    log_loss_knn[k]
+  }
+  
+  par(mfrow = c(1, 2)) # divise la fenetre en 1 ligne 2 colonnes
+  plot(accuracy_knn, col = "lightblue", type = "l", lwd = 3, xlab = "Nombre de voisins")
+  plot(log_loss_knn, col = "palegreen", type = "l", lwd = 3, xlab = "Nombre de voisins")
+  
+  library(magrittr)
+  data.frame(n, accuracy_knn, log_loss_knn)  %>% knitr::kable(digit = 2)
+``` 
+
+```{r}
+    # nnet
+  accuracy_nnet <- NULL
+  log_loss_nnet <-  NULL
+  decay <- c(0, 10^(-(6:0)))
+  for (lambda in decay){
+      y <-  as.numeric(cancer_train$Class == "malignant")
+      
+      mod_nnet <- nnet::nnet(x = cancer_train[,-10], 
+                             y = y, 
+                             size = 30,
+                             entropy = TRUE, 
+                             decay = lambda, 
+                             trace = FALSE)
+      
+      prob_nnet <- predict(mod_nnet, cancer_test[,-10])
+      
+      prob_nnet[prob_nnet == 0] <- 1e-08
+      prob_nnet[prob_nnet == 1] <- 1 - 1e-08
+      
+      accuracy_nnet <- c(accuracy_nnet, mean((prob_nnet > 0.5) == (cancer_test$Class == "malignant")))
+
+      log_loss_nnet <- c(log_loss_nnet, -mean((cancer_test$Class == "benign")*log(1 - prob_nnet) + (cancer_test$Class == "malignant")*log(prob_nnet))) 
+      
+  }
+  library(magrittr)
+
+  names(accuracy_nnet) <- as.character(decay)
+  names(log_loss_nnet) <- as.character(decay)
+  
+  data.frame(accuracy_nnet, log_loss_nnet)  %>% knitr::kable(digit = 2)
+```
 
 #### Défi "Wisconsin Breast Cancer Database" : Evaluation finale
 
