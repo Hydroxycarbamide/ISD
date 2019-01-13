@@ -183,9 +183,6 @@ x_imdb contient 2 000 000 de mots les 2000 plus fréquents de chaque document de
 ```
 
 Et voilà. On est en pleine forme et on dispose d'une base d'apprentissage comportant les fréquences d'apparition des mots de l'index pour 10000 documents (`x_train`) et les opinions des utilisateurs `y_train`. Le TP peut vraiment commencer.
-```{r}
-index[o[which(r2 > 0.02) + 45]]
-```
 
 #### Etude d'association
 
@@ -262,6 +259,129 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 * \`A l'aide des outils vus dans les séances précédentes, tels que _keras_, _lda_, _nnet_, ou d'autres bibliothèques de programmes que vous pourriez trouver dans R, ajuster des modèles d'apprentissage aux données contenues dans le TP : "x_imbd" et "y_imbd".
 
+```{r}
+# On retranche les données en ensembles de tests et d'apprentissage
+  x_train <- x_imbd[(0:200),]
+  x_test <- x_imbd[-(0:200),]
+  y_train <- y_imbd[(0:200)]
+  y_test <- y_imbd[-(0:200)]
+```
+
+
+Méthode analyse discriminante linéaire:
+```{r}
+dim(x_train)
+nrow(x_train)
+length(y_train)
+```
+```{r}
+
+    # lda de l'ensemble d'apprentissage
+      # mod_lda <- MASS::lda(x_train, data = x_train[,1])
+    mod_lda <- MASS::lda(x = x_train, grouping = x_train[,1])
+
+    # probabilité à priori de l'ensemble d'apprentissage
+      prediction <- predict(mod_lda, newdata = x_train)
+      pred_lda <- prediction$class
+    # précision entre les 2 ensemble (apprentissage et test)
+      accuracy_lda <- mean(pred_lda == x_train[,1])
+      
+    # probabilité de l'ensemble testé
+      prob_lda <- prediction$posterior
+      
+    # logloss 
+      # log_loss_lda <- -mean((cancer_test$Class == "benign")*log(1 - prob_lda) + (cancer_test$Class == "malignant")*log(prob_lda))
+      
+      accuracy_lda
+      # log_loss_lda
+```
+
+Méthode du réseau de neuronnes:
+
+```{r}
+library(keras)
+model <- keras_model_sequential() 
+model %>% 
+    layer_dense(units = 100, activation = 'relu', input_shape = 2) %>% 
+    layer_dropout(rate = 0.1) %>% 
+    layer_dense(units = 2, activation = 'softmax')
+  
+## On redéfinie le modèle pour obtenir les valeurs voulues (logloss, accuracy)
+model %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_rmsprop(lr = 0.001, decay = 0.001),
+  metrics = c('accuracy')
+)
+
+## On applique l'entrainement sur 20 générations
+history <- model %>% fit(
+                    x_train, 
+                    y_train, 
+                    epochs = 20,
+                    batch_size = 2,
+                    validation_split = 0.1
+)
+```
+
+```{r}
+    # nnet
+  require(nnet)
+  # y <-  as.numeric(cancer_train$Class == "malignant")
+
+  mod_nnet <- nnet::nnet(x = x_train, 
+                         y = y_train, 
+                         size = 5,
+                         entropy = TRUE, 
+                         decay = 0.01, 
+                         trace = FALSE)
+  
+  prob_nnet <- predict(mod_nnet, x_test)
+  
+  prob_nnet[prob_nnet == 0] <- 1e-08
+  prob_nnet[prob_nnet == 1] <- 1 - 1e-08
+  
+  # accuracy_nnet <- mean((prob_nnet > 0.5) == (cancer_test$Class == "malignant"))
+
+  # log_loss_nnet <- -mean((cancer_test$Class == "benign")*log(1 - prob_nnet) + (cancer_test$Class == "malignant")*log(prob_nnet)) 
+  
+  # accuracy_nnet
+  # log_loss_nnet
+```
+
+Méthode des k-plus proches voisins:
+```{r}
+    # knn
+     mod_knn <- class::knn(x_train, 
+                            x_test, 
+                            y_train, 
+                            k = 15, 
+                            prob = TRUE)
+      
+      accuracy_knn <- mean(mod_knn == cancer_test$Class)
+      accuracy_knn
+      
+      prob_class <- attr(mod_knn, "prob")
+      prob_class[prob_class == 1] <-  1 - 1e-08
+      
+      log_loss_knn <- - mean( (mod_knn == cancer_test$Class)*log(prob_class) + (mod_knn !=     cancer_test$Class)*log(1 - prob_class) )
+      log_loss_knn
+``` 
+
+
+```{r}
+  log_loss <-  c(log_loss_knn, log_loss_lda, log_loss_nnet)
+
+  names(log_loss) <-  c("knn", "lda", "nnet")
+  
+  barplot(log_loss, col = 2:4, ylab = "log loss")
+  
+  accuracy <- c(accuracy_knn, accuracy_lda, accuracy_nnet)
+  
+  names(accuracy) <-  c("knn", "lda", "nnet")
+  
+  barplot(accuracy, col = 2:4, ylab = "accuracy") 
+```
+
 
 * Dans un tableau, décrire les performances des méthodes choisies pour des échantillons d'apprentissage et de test que vous aurez créés vous-mêmes. Les performances seront mesurées par les erreurs de classification et d'entropie (log loss).
 
@@ -269,10 +389,10 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 ```{r}
 # standard r packages: 
-  # saveRDS(model, file = "my_login_model.RDS")
+  # saveRDS(model, file = "nguyene_model.RDS")
 
 #keras
-  # save_model_hdf5(object = model, filepath = "my_login_model_keras.hdf5")
+  # save_model_hdf5(object = model, filepath = "nguyene_model_keras.hdf5")
 ```
 
 
@@ -283,7 +403,7 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 ```{r, include = FALSE}
 prediction_finale <- function(x_ultime = "x_ultime", 
                               y_ultime = "y_ultime",
-                              file_path = "my_login_model_keras.hdf5"){
+                              file_path = "nguyene_model_keras.hdf5"){
   #Remplacer "my_login" par votre propre login ensimag. 
   
   require(magrittr) 
