@@ -100,6 +100,14 @@ y_imbd <- rbind(y_imbd, to_categorical(imbd$test$y[1:5000], 2))
 
 * Dans quelles proportions les termes de valeur d'association $r^2$ supérieure à 0.02 apparaissent-ils dans les documents **à connotation positive** ? Représenter graphiquement ces proportions  à l'aide d'un diagramme en barre.
 
+```{r}
+# Calculer la frequence des termes realisant la condition
+  freq <- x[y == 1, r2 > 0.02] %>% apply(2, mean)
+# mots dans l'index et barplot
+  names(freq) <-  index[o[(which(r2 > 0.02) + 45)]] %>% names()
+  barplot(freq, col = "lightblue", las = 2)
+```
+
 #### Modèles de prédiction
 
 * \`A l'aide des outils vus dans les séances précédentes, tels que `keras`, `lda`, `nnet`, ou d'autres bibliothèques de programmes que vous pourriez trouver dans R, ajuster des modèles d'apprentissage aux données contenues dans le TP : `x_imbd` et `y_imbd`.

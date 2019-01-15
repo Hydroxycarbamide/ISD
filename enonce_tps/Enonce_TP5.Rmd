@@ -208,10 +208,9 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 ```{r}
   
   # quelque chose à changer
-  # index[o[ which(r2 > 0.03) + 45 ]] %>% names()
-  # index[o[ which(r2 > 0.02) + 45 ]] %>% names()
-  # index[o[ which(r2 > 0.005) + 45 ]] %>% names()
-  head(index[o[ which(r2 > 0.02) + 45 ]])
+  index[o[ which(r2 > 0.03) + 45 ]] %>% names()
+  index[o[ which(r2 > 0.02) + 45 ]] %>% names()
+  index[o[ which(r2 > 0.005) + 45 ]] %>% names()
 ```
 
 * Dans quelles proportions les termes de valeur d'association $r^2$ supérieure à 0.02 apparaissent-ils dans les documents ? Représenter graphiquement ces proportions  à l'aide d'un diagramme en barre. 
@@ -219,7 +218,7 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 ```{r}
 # Calculer la frequence des termes realisant la condition
-  freq <- x[, which(r2 > 0.02) + 45] %>% apply(2, mean) 
+  freq <- x[, r2 > 0.02] %>% apply(2, mean) 
 
 # mots dans l'index et barplot
   names(freq) <-  index[o[which(r2 > 0.02) + 45]] %>% names() 
@@ -233,13 +232,9 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 ```{r}
 # Calculer la frequence des termes realisant la condition
-
-  doc_pos = x[which(y == 1)]
-  doc_pos
-  freq <- x[, which(r2 > 0.02) + 45] %>% apply(2, mean) 
-
+  freq <- x[y == 0, r2 > 0.02] %>% apply(2, mean)
 # mots dans l'index et barplot
-  names(freq) <-  index[o[which(r2 > 0.02) + 45]] %>% names() 
+  names(freq) <-  index[o[(which(r2 > 0.02) + 45)]] %>% names()
   barplot(freq, col = "lightblue", las = 2)
 ```
 
@@ -248,7 +243,11 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 
 ```{r}
-  i_have_a_dream
+# Calculer la frequence des termes realisant la condition
+  freq <- x[y == 1, r2 > 0.02] %>% apply(2, mean)
+# mots dans l'index et barplot
+  names(freq) <-  index[o[(which(r2 > 0.02) + 45)]] %>% names()
+  barplot(freq, col = "lightblue", las = 2)
 ```
 
 
@@ -261,10 +260,10 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 ```{r}
 # On retranche les données en ensembles de tests et d'apprentissage
-  x_train <- x_imbd[(0:200),]
-  x_test <- x_imbd[-(0:200),]
-  y_train <- y_imbd[(0:200)]
-  y_test <- y_imbd[-(0:200)]
+  x_train <- x_imbd[0:5000,]
+  x_test <- x_imbd[5001:10000,]
+  y_train <- y_imbd[0:5000,]
+  y_test <- y_imbd[5001:10000,]
 ```
 
 
@@ -275,34 +274,39 @@ nrow(x_train)
 length(y_train)
 ```
 ```{r}
-
     # lda de l'ensemble d'apprentissage
-      # mod_lda <- MASS::lda(x_train, data = x_train[,1])
-    mod_lda <- MASS::lda(x = x_train, grouping = x_train[,1])
-
+      # mod_lda <- MASS::lda(y_train ~ . , data = x_train)
+    mod_lda <- MASS::lda(x = x_train[,-2000], grouping = y_train[,1])
+```
+```{r}
     # probabilité à priori de l'ensemble d'apprentissage
-      prediction <- predict(mod_lda, newdata = x_train)
+      prediction <- predict(mod_lda, newdata = x_test[, -2000])
       pred_lda <- prediction$class
+      
     # précision entre les 2 ensemble (apprentissage et test)
-      accuracy_lda <- mean(pred_lda == x_train[,1])
+      accuracy_lda <- mean(pred_lda == y_test)
       
     # probabilité de l'ensemble testé
       prob_lda <- prediction$posterior
       
+       barplot(t(prob_lda), col = c("lightblue", "orange"),
+            border = NA,
+            xlab = "Test set")
+      which(log(prob_lda) < 0)
     # logloss 
-      # log_loss_lda <- -mean((cancer_test$Class == "benign")*log(1 - prob_lda) + (cancer_test$Class == "malignant")*log(prob_lda))
+      log_loss_lda <- -mean((y_test == 1)*log(1 - prob_lda) + (y_test == 0)*log(prob_lda))
       
       accuracy_lda
-      # log_loss_lda
+      log_loss_lda
 ```
 
 Méthode du réseau de neuronnes:
 
-```{r}
+```{r, include=FALSE}
 library(keras)
 model <- keras_model_sequential() 
 model %>% 
-    layer_dense(units = 100, activation = 'relu', input_shape = 2) %>% 
+    layer_dense(units = 100, activation = 'relu', input_shape = 2000) %>% 
     layer_dropout(rate = 0.1) %>% 
     layer_dense(units = 2, activation = 'softmax')
   
@@ -315,69 +319,109 @@ model %>% compile(
 
 ## On applique l'entrainement sur 20 générations
 history <- model %>% fit(
-                    x_train, 
+                    x_train[,], 
                     y_train, 
                     epochs = 20,
                     batch_size = 2,
                     validation_split = 0.1
 )
 ```
+```{r}
+eval_keras <- model %>% evaluate(x_test, y_test)
+loss_keras <- eval_keras$loss
+acc_keras <- eval_keras$acc
+acc_keras
+loss_keras
+```
+
+```{r, include=FALSE}
+library(keras)
+model_keras <- keras_model_sequential() 
+model_keras %>% 
+    layer_dense(units = 300, activation = 'softmax', input_shape = 2000) %>% 
+    layer_dropout(rate = 0.1) %>% 
+    layer_dense(units = 100, activation = 'softmax') %>% 
+    layer_dropout(rate = 0.1) %>% 
+    layer_dense(units = 2, activation = 'softmax')
+  
+## On redéfinie le modèle pour obtenir les valeurs voulues (logloss, accuracy)
+model_keras %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_rmsprop(lr = 0.001, decay = 0.),
+  metrics = c('accuracy')
+)
+
+## On applique l'entrainement sur 20 générations
+history_optimized <- model_keras %>% fit(
+                    x = x_imbd, 
+                    y = y_imbd, 
+                    epochs = 10,
+                    batch_size = 2,
+                    validation_split = 0.1
+)
+```
+```{r}
+eval_keras_optimized <- model_keras %>% evaluate(x_test, y_test)
+loss_keras_optimized <- eval_keras_optimized$loss
+acc_keras_optimized <- eval_keras$acc
+acc_keras_optimized
+loss_keras_optimized
+```
 
 ```{r}
     # nnet
   require(nnet)
   # y <-  as.numeric(cancer_train$Class == "malignant")
-
   mod_nnet <- nnet::nnet(x = x_train, 
                          y = y_train, 
-                         size = 5,
+                         size = 1,
                          entropy = TRUE, 
-                         decay = 0.01, 
+                         decay = 0.01,
+                         MaxNWts = 10020,
                          trace = FALSE)
-  
+```
+```{r}
   prob_nnet <- predict(mod_nnet, x_test)
   
   prob_nnet[prob_nnet == 0] <- 1e-08
   prob_nnet[prob_nnet == 1] <- 1 - 1e-08
   
-  # accuracy_nnet <- mean((prob_nnet > 0.5) == (cancer_test$Class == "malignant"))
+  accuracy_nnet <- mean((prob_nnet > 0.5) == (y_test == 1))
 
-  # log_loss_nnet <- -mean((cancer_test$Class == "benign")*log(1 - prob_nnet) + (cancer_test$Class == "malignant")*log(prob_nnet)) 
+  log_loss_nnet <- -mean((y_test == 0)*log(1 - prob_nnet) + (y_test == 1)*log(prob_nnet))
   
-  # accuracy_nnet
-  # log_loss_nnet
+  accuracy_nnet
+  log_loss_nnet
 ```
 
-Méthode des k-plus proches voisins:
 ```{r}
     # knn
-     mod_knn <- class::knn(x_train, 
-                            x_test, 
-                            y_train, 
-                            k = 15, 
-                            prob = TRUE)
-      
-      accuracy_knn <- mean(mod_knn == cancer_test$Class)
-      accuracy_knn
-      
-      prob_class <- attr(mod_knn, "prob")
-      prob_class[prob_class == 1] <-  1 - 1e-08
-      
-      log_loss_knn <- - mean( (mod_knn == cancer_test$Class)*log(prob_class) + (mod_knn !=     cancer_test$Class)*log(1 - prob_class) )
-      log_loss_knn
+  mod_knn <- class::knn(x_train, 
+                          x_train, 
+                          y_train, 
+                          k = 50, 
+                          prob = TRUE)
+    
+  accuracy_knn <- mean(mod_knn == y_test)
+  accuracy_knn
+  
+  prob_knn <- attr(mod_knn, "prob")
+  prob_knn[prob_knn == 1] <-  1 - 1e-08
+    
+  log_loss_knn <- - mean( (mod_knn == y_train)*log(prob_knn) + (mod_knn != y_train)*log(1 - prob_knn) )
+  log_loss_knn
 ``` 
 
-
 ```{r}
-  log_loss <-  c(log_loss_knn, log_loss_lda, log_loss_nnet)
+  log_loss <-  c(loss_keras, log_loss_lda, log_loss_nnet, log_loss_knn)
 
-  names(log_loss) <-  c("knn", "lda", "nnet")
+  names(log_loss) <-  c("keras", "lda", "nnet", 'knn')
   
   barplot(log_loss, col = 2:4, ylab = "log loss")
   
-  accuracy <- c(accuracy_knn, accuracy_lda, accuracy_nnet)
+  accuracy <- c(acc_keras, accuracy_lda, accuracy_nnet, accuracy_knn)
   
-  names(accuracy) <-  c("knn", "lda", "nnet")
+  names(accuracy) <-  c("keras", "lda", "nnet", 'knn')
   
   barplot(accuracy, col = 2:4, ylab = "accuracy") 
 ```
