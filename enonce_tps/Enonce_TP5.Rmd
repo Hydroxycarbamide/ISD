@@ -59,7 +59,7 @@ Le numéro trouvé dans l'index correspond au rang d'un terme donné. Pour trouv
 
 ```{r}
   index <- keras::dataset_imdb_word_index()
-  names(index[index == 1])
+  # names(index[index == 1])
 ```
 
 Sans surprise, le terme le plus fréquemment utilisé est l'article "the". Sa valeur dans l'index est donc égale à 1. 
@@ -68,7 +68,7 @@ L'article "the" se retrouve à la position 85976 dans l'index. L'index n'est don
 
 ```{r}
   o <- as.numeric(index) %>% order()
-  index[o[1:10]] %>% names()
+  # index[o[1:10]] %>% names()
 ```
 
 Nous voyons qu'il s'agit d'articles, de prépositions ou de termes non-informatifs, comme par exemple, des éléments extraits des balises html. Il sera peut-être préférable de filtrer les termes les plus utilisés. L'entrée 49 correspond au terme "good", nous nous arrêtons juste avant et nous filtrons les 48 premières entrées. 
@@ -92,14 +92,14 @@ Par exemple le document numéro 13 dans l'ensemble d'apprentissage est lu de la 
 
 ```{r}
   document13 <- imbd$train$x[[13]]
-  document13
+  # document13
 ```
 
 Nous voyons que le terme d'indice 2 n'a pas été filtré correctement (nous l'enlèverons plus tard). Les fréquences des termes apparaissant dans le document 13 peuvent être données par la fonction `table()`. Cette fonction utilise l'ordre alphabétique pour représenter les comptages de chaque terme.  
 
 ```{r}
   index[o[document13]] %>%  names() %>% table()
-  index[o[document13]] %>%  names()
+  # index[o[document13]] %>%  names()
 ```
 
 Le document 13 contient les termes "beautiful", "happy",  "interesting", "love", "laugh" mais aussi "rubbish" et "sad". On peut penser qu'il est plutôt associé à une opinion positive (valeur 0). Cela se vérifie en affichant la variable $y$.
@@ -269,60 +269,59 @@ Le but d'une étude d'association est d'identifier les termes les plus associés
 
 Méthode analyse discriminante linéaire:
 ```{r}
-dim(x_train)
-nrow(x_train)
-length(y_train)
-```
-```{r}
     # lda de l'ensemble d'apprentissage
       # mod_lda <- MASS::lda(y_train ~ . , data = x_train)
-    mod_lda <- MASS::lda(x = x_train[,-2000], grouping = y_train[,1])
-```
-```{r}
+    mod_lda <- MASS::lda(x = x_train[,-2000], grouping = y_train[,-1])
+
     # probabilité à priori de l'ensemble d'apprentissage
       prediction <- predict(mod_lda, newdata = x_test[, -2000])
       pred_lda <- prediction$class
       
     # précision entre les 2 ensemble (apprentissage et test)
-      accuracy_lda <- mean(pred_lda == y_test)
+      accuracy_lda <- mean(pred_lda == y_test[,-1])
       
     # probabilité de l'ensemble testé
       prob_lda <- prediction$posterior
       
-       barplot(t(prob_lda), col = c("lightblue", "orange"),
-            border = NA,
-            xlab = "Test set")
-      which(log(prob_lda) < 0)
+      prob_lda[prob_lda == 1] <- 1 - 1e-09
+      prob_lda[prob_lda == 0] <- 1e-09 
+      
     # logloss 
-      log_loss_lda <- -mean((y_test == 1)*log(1 - prob_lda) + (y_test == 0)*log(prob_lda))
+      log_loss_lda <- -mean((y_test[,-1] == 1)*log(1 - prob_lda[1]) + (y_test[,-1] == 0)*log(prob_lda[1]))
       
       accuracy_lda
       log_loss_lda
 ```
 
-Méthode du réseau de neuronnes:
+Méthode du réseau de neuronnes (multiples couches cachées):
 
 ```{r, include=FALSE}
 library(keras)
 model <- keras_model_sequential() 
 model %>% 
-    layer_dense(units = 100, activation = 'relu', input_shape = 2000) %>% 
-    layer_dropout(rate = 0.1) %>% 
-    layer_dense(units = 2, activation = 'softmax')
+    layer_dense(units = 5, activation = 'relu', input_shape = 2000) %>%
+    layer_dropout(rate = 0.2) %>%
+    layer_dense(5, activation = 'relu') %>%
+    layer_dropout(rate = 0.2) %>%
+    layer_dense(5, activation = 'relu') %>%
+    layer_dropout(rate = 0.2) %>%
+    layer_dense(5, activation = 'relu') %>%
+    layer_dropout(rate = 0.2) %>%
+    layer_dense(units = 2, activation = 'sigmoid')
   
 ## On redéfinie le modèle pour obtenir les valeurs voulues (logloss, accuracy)
 model %>% compile(
   loss = 'categorical_crossentropy',
-  optimizer = optimizer_rmsprop(lr = 0.001, decay = 0.001),
+  optimizer = 'adam',
   metrics = c('accuracy')
 )
 
-## On applique l'entrainement sur 20 générations
+## On applique l'entrainement sur 10 générations
 history <- model %>% fit(
-                    x_train[,], 
+                    x_train, 
                     y_train, 
-                    epochs = 20,
-                    batch_size = 2,
+                    epochs = 10,
+                    batch_size = 128,
                     validation_split = 0.1
 )
 ```
@@ -334,61 +333,93 @@ acc_keras
 loss_keras
 ```
 
+Méthode du réseau de neuronnes (1 couche cachée):
+
 ```{r, include=FALSE}
 library(keras)
 model_keras <- keras_model_sequential() 
 model_keras %>% 
-    layer_dense(units = 300, activation = 'softmax', input_shape = 2000) %>% 
-    layer_dropout(rate = 0.1) %>% 
-    layer_dense(units = 100, activation = 'softmax') %>% 
-    layer_dropout(rate = 0.1) %>% 
+    layer_dense(units = 5, activation = 'relu', input_shape = 2000) %>% 
+    layer_dropout(rate = 0.2) %>%
     layer_dense(units = 2, activation = 'softmax')
   
 ## On redéfinie le modèle pour obtenir les valeurs voulues (logloss, accuracy)
 model_keras %>% compile(
   loss = 'categorical_crossentropy',
-  optimizer = optimizer_rmsprop(lr = 0.001, decay = 0.),
+  optimizer = optimizer_rmsprop(lr = 0.001, decay = 0.00001),
   metrics = c('accuracy')
 )
 
-## On applique l'entrainement sur 20 générations
-history_optimized <- model_keras %>% fit(
-                    x = x_imbd, 
-                    y = y_imbd, 
+## On applique l'entrainement sur 10 générations
+history_non_deep <- model_keras %>% fit(
+                    x = x_train, 
+                    y = y_train, 
                     epochs = 10,
-                    batch_size = 2,
+                    batch_size = 128,
                     validation_split = 0.1
 )
 ```
 ```{r}
-eval_keras_optimized <- model_keras %>% evaluate(x_test, y_test)
-loss_keras_optimized <- eval_keras_optimized$loss
-acc_keras_optimized <- eval_keras$acc
-acc_keras_optimized
-loss_keras_optimized
+eval_keras_non_deep <- model_keras %>% evaluate(x_test, y_test)
+loss_keras_non_deep <- eval_keras_non_deep$loss
+acc_keras_non_deep <- eval_keras_non_deep$acc
+acc_keras_non_deep
+loss_keras_non_deep
 ```
+
+Méthode du réseau de neuronnes (0 couche cachée):
+
+```{r, include=FALSE}
+library(keras)
+model_keras_zero_hidden <- keras_model_sequential() 
+model_keras_zero_hidden %>% 
+    layer_dense(units = 2, activation = 'sigmoid', input_shape = 2000)
+  
+## On redéfinie le modèle pour obtenir les valeurs voulues (logloss, accuracy)
+model_keras_zero_hidden %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_rmsprop(lr = 0.001, decay = 0.00001),
+  metrics = c('accuracy')
+)
+
+## On applique l'entrainement sur 10 générations
+history_zero_hidden <- model_keras_zero_hidden %>% fit(
+                    x = x_train, 
+                    y = y_train, 
+                    epochs = 10,
+                    batch_size = 128,
+                    validation_split = 0.1
+)
+```
+```{r}
+eval_keras_zero_hidden <- model_keras_zero_hidden %>% evaluate(x_test, y_test)
+loss_keras_zero_hidden <- eval_keras_zero_hidden$loss
+acc_keras_zero_hidden <- eval_keras_zero_hidden$acc
+acc_keras_zero_hidden
+loss_keras_zero_hidden
+```
+
+Méthode du réseau de neuronnes (nnet):
 
 ```{r}
     # nnet
   require(nnet)
-  # y <-  as.numeric(cancer_train$Class == "malignant")
-  mod_nnet <- nnet::nnet(x = x_train, 
-                         y = y_train, 
-                         size = 1,
-                         entropy = TRUE, 
-                         decay = 0.01,
-                         MaxNWts = 10020,
-                         trace = FALSE)
-```
-```{r}
+  mod_nnet <- nnet(x = x_train, 
+                   y = y_train[,1], 
+                   size = 2,
+                   entropy = TRUE, 
+                   decay = 0.01,
+                   MaxNWts = 10020,
+                   trace = FALSE)
+  
   prob_nnet <- predict(mod_nnet, x_test)
   
   prob_nnet[prob_nnet == 0] <- 1e-08
   prob_nnet[prob_nnet == 1] <- 1 - 1e-08
   
-  accuracy_nnet <- mean((prob_nnet > 0.5) == (y_test == 1))
+  accuracy_nnet <- mean((prob_nnet > 0.5) == (y_test[,1] == 1))
 
-  log_loss_nnet <- -mean((y_test == 0)*log(1 - prob_nnet) + (y_test == 1)*log(prob_nnet))
+  log_loss_nnet <- -mean((y_test[,1] == 0)*log(1 - prob_nnet) + (y_test[,1] == 1)*log(prob_nnet))
   
   accuracy_nnet
   log_loss_nnet
@@ -396,47 +427,59 @@ loss_keras_optimized
 
 ```{r}
     # knn
-  mod_knn <- class::knn(x_train, 
-                          x_train, 
-                          y_train, 
-                          k = 50, 
+  mod_knn <- class::knn(train = x_train, 
+                          test = x_test, 
+                          cl = y_train[,1], 
+                          k = 5, 
                           prob = TRUE)
-    
-  accuracy_knn <- mean(mod_knn == y_test)
+```
+```{r}
+  accuracy_knn <- mean(mod_knn == y_test[,1])
   accuracy_knn
   
   prob_knn <- attr(mod_knn, "prob")
   prob_knn[prob_knn == 1] <-  1 - 1e-08
     
-  log_loss_knn <- - mean( (mod_knn == y_train)*log(prob_knn) + (mod_knn != y_train)*log(1 - prob_knn) )
+  log_loss_knn <- - mean( (mod_knn == y_test[,1])*log(prob_knn) + (mod_knn != y_test[,1])*log(1 - prob_knn) )
   log_loss_knn
 ``` 
-
-```{r}
-  log_loss <-  c(loss_keras, log_loss_lda, log_loss_nnet, log_loss_knn)
-
-  names(log_loss) <-  c("keras", "lda", "nnet", 'knn')
-  
-  barplot(log_loss, col = 2:4, ylab = "log loss")
-  
-  accuracy <- c(acc_keras, accuracy_lda, accuracy_nnet, accuracy_knn)
-  
-  names(accuracy) <-  c("keras", "lda", "nnet", 'knn')
-  
-  barplot(accuracy, col = 2:4, ylab = "accuracy") 
-```
 
 
 * Dans un tableau, décrire les performances des méthodes choisies pour des échantillons d'apprentissage et de test que vous aurez créés vous-mêmes. Les performances seront mesurées par les erreurs de classification et d'entropie (log loss).
 
+```{r}
+  log_loss <-  c(loss_keras, 
+                 loss_keras_non_deep,
+                 loss_keras_zero_hidden,
+                 log_loss_lda, 
+                 log_loss_nnet, 
+                 log_loss_knn)
+
+
+  names_models <- c("deep_nnet", "non_deep_nnet", "0_hidden_layer_nnet", "lda", "nnet", 'knn')
+
+  names(log_loss) <-  names_models
+  
+  accuracy <- c(acc_keras, 
+                acc_keras_non_deep, 
+                acc_keras_zero_hidden,
+                accuracy_lda, 
+                accuracy_nnet, 
+                accuracy_knn)
+  
+  names(accuracy) <-  names_models
+  
+  data.frame(accuracy, log_loss)  %>% knitr::kable(digit = 2)
+```
+
 * Sauver votre modèle dans un format compressé (RDS ou HDF5 pour `keras`). Remplacer la chaîne de caractère "my_login" par votre propre login ensimag. 
 
 ```{r}
-# standard r packages: 
-  # saveRDS(model, file = "nguyene_model.RDS")
+# standard r packages:
+  # saveRDS(model_keras, file = "nguyene_model.RDS")
 
 #keras
-  # save_model_hdf5(object = model, filepath = "nguyene_model_keras.hdf5")
+  save_model_hdf5(object = model_keras, filepath = "nguyene_model_keras.hdf5")
 ```
 
 
@@ -456,19 +499,19 @@ prediction_finale <- function(x_ultime = "x_ultime",
   if (nrow(x_ultime) != 5000 | ncol(x_ultime) != 2000) 
     stop("Dimensions de x incorrectes.")
 
-  if (nrow(y_ultime) != 5000 | ncol(xy_ultime) != 2) 
+  if (nrow(y_ultime) != 5000 | ncol(y_ultime) != 2) 
     stop("Dimensions de y incorrectes.")
     
   #if keras
     require(keras) 
 
     load_model_hdf5(filepath = file_path)
-    model %>% evaluate(x_ultime, y_ultime)
+    model_keras %>% evaluate(x_ultime, y_ultime)
 }
 ```
 
 ```{r}
-#  prediction_finale(x_test_imbd, y_test)
+ prediction_finale(x_test, y_test)
 ```
 
 * *Note* :  pour d'autres modèles que ceux _keras()_, on sauvera l'objet correspondant au modèle ajusté avec la fonction _save()_ ou _saveRDS()_. On écrira une fonction permettant de charger l'objet créé (_load()_) et lui appliquant la fonction _predict()_ dans le format spécifique à la classe du modèle choisi (_knn_, _nnet_, _lda_, etc).
